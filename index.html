@@ -428,7 +428,7 @@
   const num = new Intl.NumberFormat("en-GB");
   const dec = new Intl.NumberFormat("en-GB",{maximumFractionDigits:1});
 
-  const state = { history: [], range: 90, cardId: null, hosted: false, extras: {}, overrides: {} };
+  const state = { history: [], range: 90, cardId: null, hosted: false, committed: 0, extras: {}, overrides: {} };
 
   /* ---------- local persistence (used when there's no committed history) ---------- */
   const LOCAL = "btc-vs-pokemon:local";
@@ -485,12 +485,14 @@
 
   /* ---------- data ---------- */
   async function loadHistory() {
+    // Returns {ok, entries}. An empty history.json is a perfectly valid hosted
+    // state — it just means the daily job hasn't run yet.
     try {
       const r = await fetch("history.json", {cache:"no-store"});
-      if (!r.ok) return null;
+      if (!r.ok) return {ok:false, entries:[]};
       const h = await r.json();
-      return Array.isArray(h) && h.length ? h : null;
-    } catch (e) { return null; }
+      return {ok:true, entries: Array.isArray(h) ? h : []};
+    } catch (e) { return {ok:false, entries:[]}; }
   }
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -642,9 +644,16 @@
       bEl.className = pEl.className = "side__pct flat";
       bEl.textContent = pEl.textContent = "—";
       el("pkmDetail").textContent = "needs two days of data";
-      v.innerHTML = state.hosted
-        ? `Tracking starts today.<small>The first snapshot is in. Come back tomorrow and a gap opens up.</small>`
-        : `Live prices only.<small>Host this and the daily job starts building history. Until then there's nothing to compare against.</small>`;
+
+      if (!state.hosted) {
+        v.innerHTML = `history.json not found.<small>Upload it next to index.html, or just use the live battle — that needs no history at all.</small>`;
+      } else if (state.committed === 0) {
+        v.innerHTML = `Hosted, but no snapshot yet.<small>Open the repo's Actions tab, pick "Daily price snapshot" and hit Run workflow. That logs day one straight away.</small>`;
+      } else if (state.committed === 1) {
+        v.innerHTML = `Day one logged.<small>One snapshot so far — the comparison needs two. The next one lands at 07:00 UTC.</small>`;
+      } else {
+        v.innerHTML = `Not enough data in this window.<small>Try the All range, or give the daily job another day.</small>`;
+      }
       return;
     }
 
@@ -669,7 +678,10 @@
     el("legName").textContent = l && l.cards[state.cardId] ? l.cards[state.cardId].name : "Card";
 
     if (s.length < 2) {
-      host.innerHTML = `<div class="state"><strong>${s.length ? "One snapshot so far." : "No history yet."}</strong>The chart needs two days.</div>`;
+      const why = !state.hosted ? "history.json isn't loading."
+                : state.committed === 0 ? "The daily job hasn't run yet."
+                : "Only one snapshot so far.";
+      host.innerHTML = `<div class="state"><strong>${why}</strong>The chart needs two days. The battle button works right now regardless — it replays bitcoin's last 12 hours.</div>`;
       el("legBtc").textContent = "—"; el("legCard").textContent = "—";
       return;
     }
@@ -1298,10 +1310,11 @@
   async function boot() {
     const local = await readLocal();
     const hosted = await loadHistory();
-    state.hosted = !!hosted;
+    state.hosted = hosted.ok;
+    state.committed = hosted.entries.length;
     state.extras = local.extras || {};
     state.overrides = local.overrides || {};
-    state.history = mergeHistories(hosted || [], local.history || []);
+    state.history = mergeHistories(hosted.entries, local.history || []);
 
     // 1. Anything already stored goes on screen straight away.
     if (state.history.length) {
@@ -1329,7 +1342,10 @@
     }
 
     // 3. Card prices, all requested at once.
-    const cards = await fetchCards(!state.hosted, Object.keys(state.extras));
+    // Grail queries run when there's no committed data to lean on — that
+    // includes a hosted repo whose daily job hasn't fired yet.
+    const needCards = !state.hosted || state.committed === 0;
+    const cards = await fetchCards(needCards, Object.keys(state.extras));
     if (Object.keys(cards).length) {
       const l = latest();
       state.history = mergeSnapshot(state.history, {d: day, btc: btc || (l && l.btc), cards});
