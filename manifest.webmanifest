@@ -1,0 +1,17 @@
+{
+  "name": "Bitcoin vs Pokémon",
+  "short_name": "BTC vs Pkmn",
+  "description": "Bitcoin against the most expensive Pokémon card on the market, priced in pounds.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080C1C",
+  "theme_color": "#080C1C",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
