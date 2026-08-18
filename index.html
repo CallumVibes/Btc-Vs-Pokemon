@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitcoin vs Pokémon</title>
+<meta name="description" content="How bitcoin is doing against the most expensive Pokémon card on the market, in pounds.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#080C1C">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BTC vs Pkmn">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#080C1C; --ink-2:#101838; --kanto:#21418F;
+    --foil:#7FD8E8; --sats:#F7931A; --paper:#F0E7D2;
+    --gold:#E8C25A; --dim:#8A93B8; --line:rgba(240,231,210,.14);
+    --win:#5BD98A; --lose:#E8657C;
+    --display:"Bungee",system-ui,sans-serif;
+    --body:"Space Grotesk",system-ui,sans-serif;
+    --data:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, #1B2A63 0%, transparent 60%),
+      radial-gradient(900px 500px at 95% 0%, #3A2360 0%, transparent 55%),
+      var(--ink);
+    background-attachment:fixed;
+    color:var(--paper);font-family:var(--body);font-size:16px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;
+    padding:calc(24px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right))
+            calc(70px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left))}
+  .sr{position:absolute;left:-9999px}
+
+  .eyebrow{
+    font-family:var(--data);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--dim);margin:0;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--foil);
+    box-shadow:0 0 0 0 rgba(127,216,232,.7);animation:pulse 3.6s infinite;flex:none}
+  @keyframes pulse{70%{box-shadow:0 0 0 9px rgba(127,216,232,0)}100%{box-shadow:0 0 0 0 rgba(127,216,232,0)}}
+  .eyebrow__price{color:var(--sats);font-weight:700}
+  .eyebrow__price:not(:empty)::before{content:"·";color:var(--dim);font-weight:400;margin-right:9px}
+
+  /* ---------- the champion ---------- */
+  .champ{display:grid;grid-template-columns:132px 1fr;gap:20px;align-items:start;margin:24px 0 0}
+  .champ__frame{position:relative;aspect-ratio:245/342;border-radius:10px;overflow:hidden;
+    background:linear-gradient(160deg,var(--kanto),#16265A);
+    border:1px solid rgba(240,231,210,.3);box-shadow:0 12px 28px rgba(0,0,0,.5)}
+  .champ__art{width:100%;height:100%;object-fit:cover;display:block}
+  .champ__holo{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease;
+    background:
+      radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 42%),
+      repeating-linear-gradient(115deg,rgba(255,0,120,.55) 0%,rgba(255,190,0,.55) 9%,
+        rgba(0,255,170,.55) 18%,rgba(0,150,255,.55) 27%,rgba(190,0,255,.55) 36%,rgba(255,0,120,.55) 45%);
+    background-size:auto,210% 210%;background-position:0 0,var(--mx,50%) var(--my,50%);
+    mix-blend-mode:color-dodge;filter:saturate(1.4)}
+  .champ__frame:hover .champ__holo{opacity:.45}
+  .champ__crown{position:absolute;top:0;left:0;background:var(--gold);color:#1A0F00;
+    font-family:var(--data);font-weight:700;font-size:8.5px;letter-spacing:.14em;
+    padding:4px 7px;border-bottom-right-radius:9px;text-transform:uppercase}
+  .champ__label{font-family:var(--data);font-size:10px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+  .champ__name{font-family:var(--display);font-size:clamp(1.1rem,4.6vw,1.9rem);margin:0;line-height:1.2}
+  .champ__meta{font-family:var(--data);font-size:11px;color:var(--dim);margin:8px 0 0;letter-spacing:.04em}
+  .champ__price{font-family:var(--data);font-size:15px;color:var(--foil);margin:10px 0 0;
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .price-edit{background:none;border:none;padding:0;cursor:pointer;
+    font-family:var(--data);font-size:15px;color:var(--foil);text-align:left;
+    letter-spacing:0;text-transform:none;font-weight:400;
+    border-bottom:1px dashed rgba(127,216,232,.45);transition:color .18s ease}
+  .price-edit:hover{color:var(--paper);border-bottom-color:var(--paper)}
+  .price-edit b{color:var(--gold);font-weight:400;font-size:11px;letter-spacing:.06em}
+  .price-input{background:var(--ink-2);border:1px solid rgba(240,231,210,.25);border-radius:3px;
+    color:var(--paper);font-family:var(--data);font-size:14px;padding:7px 9px;max-width:210px}
+  .price-clear{background:none;border:none;padding:0;cursor:pointer;color:var(--dim);
+    font-family:var(--data);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    text-decoration:underline;text-underline-offset:2px}
+  .price-clear:hover{color:var(--lose)}
+  .champ__buys{font-family:var(--display);font-size:clamp(1.6rem,6vw,2.7rem);
+    line-height:1;margin:16px 0 0;color:var(--gold);
+    text-shadow:2px 2px 0 rgba(8,12,28,.55)}
+  .champ__buys em{display:block;font-style:normal;font-family:var(--body);font-weight:500;
+    font-size:12.5px;letter-spacing:.02em;color:var(--dim);margin-top:7px;text-shadow:none}
+  .champ__sats{display:inline-block;margin:10px 0 0;background:var(--sats);color:#1A0F00;
+    font-family:var(--data);font-weight:700;font-size:12px;padding:5px 10px;border-radius:2px}
+
+  /* ---------- scoreboard ---------- */
+  .board{margin:26px 0 0;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .board__row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .side{background:var(--ink-2);padding:20px 18px}
+  .side__name{font-family:var(--data);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .side--btc .side__name{color:var(--sats)}
+  .side--pkm .side__name{color:var(--foil)}
+  .side__pct{font-family:var(--display);font-size:clamp(1.8rem,8vw,3.3rem);line-height:.95;margin:0;word-break:break-word}
+  .side__pct.up{color:var(--win)} .side__pct.down{color:var(--lose)} .side__pct.flat{color:var(--dim)}
+  .side__detail{font-family:var(--data);font-size:11px;color:var(--dim);margin:9px 0 0;line-height:1.6}
+  .verdict{background:var(--kanto);padding:16px 18px;
+    font-family:var(--display);font-size:clamp(.95rem,3.6vw,1.25rem);line-height:1.35}
+  .verdict small{display:block;font-family:var(--body);font-size:12.5px;font-weight:400;
+    color:rgba(240,231,210,.72);margin-top:7px;letter-spacing:0}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:22px 0 0}
+  .seg{display:flex;border:1px solid rgba(240,231,210,.22);border-radius:3px;overflow:hidden}
+  .seg button{background:var(--ink-2);color:var(--dim);border:none;padding:9px 13px;
+    font-family:var(--data);font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;cursor:pointer;transition:background .18s ease,color .18s ease}
+  .seg button+button{border-left:1px solid rgba(240,231,210,.16)}
+  .seg button[aria-pressed="true"]{background:var(--kanto);color:var(--paper)}
+  .seg button:hover{color:var(--paper)}
+  .seg button:focus-visible,select:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
+  select{background:var(--ink-2);border:1px solid rgba(240,231,210,.2);border-radius:3px;
+    color:var(--paper);font-family:var(--data);font-size:12px;padding:9px 10px;max-width:100%}
+  /* ---------- battle ---------- */
+  .champ__col{display:flex;flex-direction:column;gap:9px}
+  .battle-launch{
+    width:100%;
+    background:var(--sats);color:#1A0F00;border:none;border-radius:4px;
+    padding:9px 6px;cursor:pointer;
+    font-family:var(--data);font-size:10.5px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
+    transition:background .18s ease,transform .12s ease,box-shadow .25s ease;
+  }
+  .battle-launch:hover{background:#FFA733;box-shadow:0 0 20px rgba(247,147,26,.42)}
+  .battle-launch:active{transform:translateY(1px)}
+  .battle-launch:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
+
+  .battle{position:fixed;inset:0;z-index:50;background:rgba(4,6,16,.9);
+    display:flex;align-items:center;justify-content:center;padding:18px}
+  .battle[hidden]{display:none}
+  .battle__panel{width:100%;max-width:560px}
+  .battle__stage{position:relative;aspect-ratio:4/3;max-height:52vh;
+    background:linear-gradient(#16265A 0%,#1E3573 55%,#24408A 100%);
+    border:3px solid var(--paper);border-radius:6px;overflow:hidden}
+  .battle__stage::after{content:"";position:absolute;left:-10%;right:-10%;top:57%;height:34%;
+    background:rgba(8,12,28,.28);border-radius:50%}
+  .battle__stage::before{content:"";position:absolute;left:34%;right:-14%;top:26%;height:22%;
+    background:rgba(8,12,28,.22);border-radius:50%}
+
+  .hpbox{position:absolute;background:var(--paper);color:var(--ink);
+    border:2px solid var(--ink);border-radius:3px;padding:6px 9px 7px;width:44%;min-width:150px;z-index:2}
+  .hpbox--foe{top:7%;left:4%}
+  .hpbox--hero{bottom:7%;right:4%}
+  .hpbox__name{font-family:var(--data);font-weight:700;font-size:10.5px;margin:0 0 5px;
+    letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hpbox__bar{height:7px;background:#3A3F52;border:1px solid var(--ink);border-radius:2px;overflow:hidden}
+  .hpbox__bar span{display:block;height:100%;width:100%;background:var(--win);
+    transition:width .7s linear,background .4s ease}
+  .hpbox__hp{font-family:var(--data);font-size:9.5px;margin:4px 0 0;text-align:right;letter-spacing:.04em}
+
+  .sprite{position:absolute;z-index:1;display:flex;align-items:center;justify-content:center}
+  .sprite--foe{top:4%;right:5%;width:33%;max-width:150px}
+  .sprite--foe img{width:100%;border-radius:5px;box-shadow:0 8px 20px rgba(0,0,0,.5);display:block}
+  .sprite--hero{bottom:6%;left:6%;width:26%;max-width:112px;aspect-ratio:1}
+  .btc-mark{width:100%;aspect-ratio:1;border-radius:50%;background:var(--sats);color:#1A0F00;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-size:clamp(1.7rem,7vw,2.7rem);
+    box-shadow:0 0 26px rgba(247,147,26,.55),0 8px 20px rgba(0,0,0,.5)}
+
+  .is-hit{animation:hit .34s steps(2) 3}
+  @keyframes hit{0%{opacity:1;transform:translateX(0)}50%{opacity:.25;transform:translateX(-7px)}100%{opacity:1;transform:translateX(0)}}
+  .is-fainted{animation:faint .7s ease forwards}
+  @keyframes faint{to{transform:translateY(58px);opacity:0}}
+
+  .battle__text{margin:10px 0 0;background:var(--paper);color:var(--ink);
+    border:3px solid var(--ink);border-radius:5px;padding:14px 15px;min-height:74px}
+  .battle__text p{margin:0;font-family:var(--data);font-size:13.5px;line-height:1.55}
+  .battle__text p::after{content:"▾";margin-left:6px;opacity:0;animation:blink 1s steps(2) infinite}
+  .battle__text p.done::after{opacity:1}
+  @keyframes blink{50%{opacity:0}}
+
+  .battle__controls{display:flex;gap:8px;margin:12px 0 0;justify-content:flex-end;
+    flex-wrap:wrap;align-items:center}
+  .seg--battle{margin-right:auto}
+  .seg--hours{margin-right:auto;margin-left:-6px}
+  .seg--hours[hidden]{display:none}
+  .seg--battle button{padding:8px 12px;font-size:10.5px}
+
+  .battle__live{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 0 0;
+    font-family:var(--data);font-size:11px;color:var(--dim);letter-spacing:.04em}
+  .battle__live[hidden]{display:none}
+  .battle__live #livePrice{color:var(--sats);font-weight:700}
+  .battle__live #liveRatio{color:var(--foil)}
+  .battle__tick{margin-left:auto}
+
+  .dmg{position:absolute;z-index:5;font-family:var(--display);font-size:19px;
+    pointer-events:none;animation:floatUp 1.1s ease-out forwards;text-shadow:2px 2px 0 rgba(8,12,28,.7)}
+  .dmg--foe{top:16%;right:12%}
+  .dmg--hero{bottom:24%;left:12%}
+  @keyframes floatUp{0%{opacity:0;transform:translateY(8px)}
+    18%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
+
+  .hpbox__bar span.is-low{animation:lowhp .7s steps(2) infinite}
+  @keyframes lowhp{50%{opacity:.45}}
+
+  .battle__note{font-family:var(--data);font-size:10px;color:var(--dim);margin:9px 0 0;
+    text-align:right;letter-spacing:.04em}
+
+  @media (max-width:560px){
+    .battle{padding:12px}
+    .battle__stage{max-height:46vh}
+    .hpbox{width:52%;min-width:0;padding:5px 7px 6px}
+  }
+
+  .stamp{font-family:var(--data);font-size:10px;color:var(--dim);letter-spacing:.1em;
+    text-transform:uppercase;margin-left:auto}
+  input[type=search]{background:var(--ink-2);border:1px solid rgba(240,231,210,.2);border-radius:3px;
+    color:var(--paper);font-family:var(--body);font-size:13.5px;padding:9px 11px;
+    flex:1 1 160px;min-width:120px;max-width:260px}
+  input[type=search]::placeholder{color:var(--dim)}
+  input[type=search]:focus-visible,.find:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
+  .find{background:transparent;color:var(--dim);border:1px solid rgba(240,231,210,.22);
+    border-radius:3px;padding:9px 13px;cursor:pointer;
+    font-family:var(--data);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    transition:background .18s ease,color .18s ease}
+  .find:hover{color:var(--paper);background:var(--ink-2)}
+  .find[disabled]{opacity:.5;cursor:progress}
+
+  .results{list-style:none;margin:12px 0 0;padding:0;display:flex;gap:8px;
+    overflow-x:auto;padding-bottom:6px}
+  .results:empty{margin:0}
+  .results li{flex:none}
+  .results .msg{color:var(--dim);font-size:12.5px;padding:5px 2px;font-family:var(--data)}
+  .chip{background:var(--ink-2);border:1px solid rgba(240,231,210,.22);color:var(--paper);
+    border-radius:3px;padding:8px 12px;cursor:pointer;text-align:left;
+    font-family:var(--body);font-weight:500;font-size:13px;white-space:nowrap;
+    transition:background .18s ease}
+  .chip:hover{background:var(--kanto)}
+  .chip small{display:block;color:var(--dim);font-size:10.5px;font-family:var(--data);margin-top:1px}
+
+  /* ---------- chart ---------- */
+  .chart-wrap{margin:34px 0 0;border-top:1px solid var(--line);padding-top:20px}
+  .chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .chart-title{font-family:var(--display);font-size:14px;margin:0}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0 0}
+  .legend span{font-family:var(--data);font-size:11px;color:var(--dim);display:flex;align-items:center;gap:7px}
+  .swatch{width:14px;height:3px;border-radius:2px;flex:none}
+  .chart{margin:12px 0 0;width:100%;height:auto;display:block}
+  .chart text{font-family:"JetBrains Mono",monospace;font-size:10px;fill:#8A93B8}
+  .chart .grid-line{stroke:rgba(240,231,210,.1);stroke-width:1}
+  .chart .base-line{stroke:rgba(240,231,210,.26);stroke-width:1;stroke-dasharray:3 4}
+
+  .state{border:1px dashed rgba(240,231,210,.28);border-radius:4px;padding:22px;margin:14px 0 0;
+    text-align:center;color:var(--dim);font-size:13.5px}
+  .state strong{display:block;color:var(--paper);font-size:15.5px;margin-bottom:5px}
+
+  .foot{margin:44px 0 0;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--dim);line-height:1.65}
+  .foot p{margin:0 0 8px}
+  .pwa{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+  .pwa:empty{display:none}
+  .pwa__btn{background:var(--sats);color:#1A0F00;border:none;border-radius:3px;
+    padding:10px 18px;cursor:pointer;font-family:var(--data);font-size:11px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase}
+  .pwa__btn:hover{background:#FFA733}
+  .pwa__status{font-family:var(--data);font-size:11px;color:var(--dim);letter-spacing:.02em}
+  .pwa__status.warn{color:var(--gold)}
+  .foot code{font-family:var(--data);color:var(--foil);font-size:11.5px}
+
+  @media (max-width:560px){
+    .champ{grid-template-columns:104px 1fr;gap:16px}
+    .battle-launch{font-size:9.5px;letter-spacing:.06em;padding:8px 4px}
+    .board__row{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Bitcoin vs Pokémon · in pounds<span class="eyebrow__price" id="headPrice"></span></p>
+
+  <section class="champ">
+    <div class="champ__col">
+      <button class="battle-launch" id="battleBtn" title="Play the window out as a battle">⚔ Battle</button>
+      <div class="champ__frame" id="frame">
+        <img class="champ__art" id="art" alt="" hidden>
+        <span class="champ__holo"></span>
+        <span class="champ__crown" id="crown">Most expensive</span>
+      </div>
+    </div>
+    <div>
+      <p class="champ__label" id="champLabel">Priciest card on the board</p>
+      <h1 class="champ__name" id="cardName">Loading…</h1>
+      <p class="champ__meta" id="cardMeta">&nbsp;</p>
+      <p class="champ__price">
+        <button class="price-edit" id="priceEdit" title="Set the price you'd actually pay">&nbsp;</button>
+        <input class="price-input" id="priceInput" type="number" min="0" step="any" hidden
+               placeholder="what it really goes for (£)">
+        <button class="price-clear" id="priceClear" hidden title="Back to the market price">reset</button>
+      </p>
+      <p class="champ__buys"><span id="buysNum">—</span><em>of these per bitcoin</em></p>
+      <p><span class="champ__sats" id="cardSats">—</span></p>
+    </div>
+  </section>
+
+  <div class="board">
+    <div class="board__row">
+      <div class="side side--btc">
+        <p class="side__name"><span class="dot" style="background:#F7931A"></span>Bitcoin</p>
+        <p class="side__pct flat" id="btcPct">—</p>
+        <p class="side__detail" id="btcDetail">loading</p>
+      </div>
+      <div class="side side--pkm">
+        <p class="side__name"><span class="dot" style="background:#7FD8E8"></span>The card</p>
+        <p class="side__pct flat" id="pkmPct">—</p>
+        <p class="side__detail" id="pkmDetail">loading</p>
+      </div>
+    </div>
+    <div class="verdict" id="verdict">Fetching today's prices…</div>
+  </div>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Time range">
+      <button data-range="30">30d</button>
+      <button data-range="90" aria-pressed="true">90d</button>
+      <button data-range="365">1y</button>
+      <button data-range="0">All</button>
+    </div>
+    <label class="sr" for="pick">Which card</label>
+    <select id="pick"></select>
+    <label class="sr" for="q">Search for a different card</label>
+    <input type="search" id="q" placeholder="Or search any card…" autocomplete="off">
+    <button class="find" id="go">Find</button>
+    <span class="stamp" id="stamp">—</span>
+  </div>
+
+  <div class="battle" id="battle" hidden>
+    <div class="battle__panel" role="dialog" aria-modal="true" aria-label="Bitcoin versus Pokémon battle">
+      <div class="battle__stage" id="battleStage">
+        <div class="hpbox hpbox--foe">
+          <p class="hpbox__name" id="foeName">CARD</p>
+          <div class="hpbox__bar"><span id="foeBar"></span></div>
+          <p class="hpbox__hp" id="foeHp">100/100</p>
+        </div>
+        <div class="sprite sprite--foe" id="foeSprite">
+          <img id="foeArt" alt="">
+        </div>
+
+        <div class="sprite sprite--hero" id="heroSprite"><span class="btc-mark">₿</span></div>
+        <div class="hpbox hpbox--hero">
+          <p class="hpbox__name">BITCOIN</p>
+          <div class="hpbox__bar"><span id="heroBar"></span></div>
+          <p class="hpbox__hp" id="heroHp">100/100</p>
+        </div>
+      </div>
+
+      <div class="battle__text"><p id="battleText">&nbsp;</p></div>
+
+      <div class="battle__live" id="liveBar" hidden>
+        <span id="livePrice">—</span>
+        <span id="liveRatio">—</span>
+        <span class="battle__tick" id="liveTick">next tick 10s</span>
+      </div>
+
+      <div class="battle__controls">
+        <div class="seg seg--battle" role="group" aria-label="Battle mode">
+          <button data-mode="live" aria-pressed="true">Live</button>
+          <button data-mode="replay" aria-pressed="false">Replay</button>
+        </div>
+        <div class="seg seg--battle seg--hours" id="hoursSeg" role="group" aria-label="Replay length" hidden>
+          <button data-hours="12" aria-pressed="true">12h</button>
+          <button data-hours="24" aria-pressed="false">24h</button>
+        </div>
+        <button class="find" id="battleSkip">Skip</button>
+        <button class="find" id="battleReplay" hidden>Replay</button>
+        <button class="find" id="battleRematch" hidden>Rematch</button>
+        <button class="find" id="battleClose">Close</button>
+      </div>
+      <p class="battle__note" id="battleNote"></p>
+    </div>
+  </div>
+
+  <ul class="results" id="results"></ul>
+
+  <section class="chart-wrap">
+    <div class="chart-head">
+      <h2 class="chart-title">Since the start of the window</h2>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#F7931A"></i>Bitcoin <b id="legBtc" style="color:#F0E7D2;margin-left:4px">—</b></span>
+      <span><i class="swatch" style="background:#7FD8E8"></i><b id="legName">Card</b> <b id="legCard" style="color:#F0E7D2;margin-left:4px">—</b></span>
+    </div>
+    <div id="chartHost"></div>
+  </section>
+
+  <footer class="foot">
+    <p class="pwa" id="pwaRow">
+      <button class="pwa__btn" id="installBtn" hidden>Install app</button>
+      <span class="pwa__status" id="pwaStatus"></span>
+    </p>
+    <p><strong>What this is.</strong> Bitcoin against whichever Pokémon card is currently the most expensive on a shortlist of grails — Base Set holos, Neo Genesis Lugia, the alt-art VMAX chase cards. If a different card takes the crown, the page follows it. Card prices are Cardmarket sold data for raw, ungraded copies. Graded slabs trade far higher.</p>
+    <p><strong>Where the numbers come from.</strong> Bitcoin from CoinGecko, refreshed every five minutes while the page is open. Cards from the Pokémon TCG API, which carries Cardmarket's sold data — that only moves once a day, so polling it faster would return the same number. Card prices are quoted in euros; the EUR→GBP rate is derived from bitcoin's own price in both currencies — <code>BTC/GBP ÷ BTC/EUR</code>.</p>
+    <p><strong>Setting your own price.</strong> Tap the card's price to type what it actually goes for — a PSA 10, a 1st Edition, whatever your friends really own. It's saved on your device and feeds the per-bitcoin count, the sats figure and the live battle. It won't move the percentages or the chart: scaling a price by a constant leaves its rate of change identical, which is exactly why a guessed grade multiplier would have been decoration.</p>
+    <p><strong>The honest caveat.</strong> This is one card against one asset over whatever window you pick, which is a much narrower claim than "Pokémon beats Bitcoin." Change the range and the winner can flip. Not investment advice.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const CG = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,eur,usd";
+  const SPOT = "https://api.coinbase.com/v2/prices/BTC-GBP/spot";
+  const TCG = "https://api.pokemontcg.io/v2/cards";
+  const FIELDS = "id,name,number,images,set,rarity,cardmarket";
+  const LIVE_QUERIES = [
+    'name:charizard set.id:base1', 'name:blastoise set.id:base1',
+    'name:lugia set.id:neo1', 'name:umbreon subtypes:VMAX'
+  ];
+
+  const el = id => document.getElementById(id);
+  const gbpFmt = new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:0});
+  const gbpFine = new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"});
+  const num = new Intl.NumberFormat("en-GB");
+  const dec = new Intl.NumberFormat("en-GB",{maximumFractionDigits:1});
+
+  const state = { history: [], range: 90, cardId: null, hosted: false, extras: {}, overrides: {} };
+
+  /* ---------- local persistence (used when there's no committed history) ---------- */
+  const LOCAL = "btc-vs-pokemon:local";
+  const mem = {};
+  const store = {
+    async get(k) {
+      try { if (window.storage) { const r = await window.storage.get(k); return r ? r.value : null; } } catch (e) {}
+      try { return localStorage.getItem(k); } catch (e) {}
+      return mem[k] ?? null;
+    },
+    async set(k, v) {
+      try { if (window.storage) { await window.storage.set(k, v); return; } } catch (e) {}
+      try { localStorage.setItem(k, v); return; } catch (e) {}
+      mem[k] = v;
+    }
+  };
+  async function readLocal() {
+    try {
+      const raw = await store.get(LOCAL);
+      if (!raw) return {history: [], extras: {}, overrides: {}};
+      const o = JSON.parse(raw);
+      return {
+        history: Array.isArray(o.history) ? o.history : [],
+        extras: (o.extras && typeof o.extras === "object") ? o.extras : {},
+        overrides: (o.overrides && typeof o.overrides === "object") ? o.overrides : {}
+      };
+    } catch (e) { return {history: [], extras: {}, overrides: {}}; }
+  }
+  async function writeLocal() {
+    await store.set(LOCAL, JSON.stringify({
+      history: state.history.slice(-1095),
+      extras: state.extras,
+      overrides: state.overrides
+    }));
+  }
+
+  const pretty = k => { const [y,m,d] = k.split("-");
+    return new Date(+y,+m-1,+d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}); };
+  const gbpOf = (eur, btc) => eur * (btc.gbp / btc.eur);
+
+  // A user-set price for a card, in GBP. Overrides the market figure everywhere.
+  function overrideFor(id) {
+    const v = parseFloat(state.overrides[id]);
+    return v > 0 ? v : null;
+  }
+  // Today's price for a card, override first, market otherwise.
+  function priceOf(id, entry) {
+    const o = overrideFor(id);
+    if (o != null) return o;
+    const e = entry || latest();
+    if (!e || !e.cards[id]) return null;
+    return gbpOf(e.cards[id].eur, e.btc);
+  }
+
+  /* ---------- data ---------- */
+  async function loadHistory() {
+    try {
+      const r = await fetch("history.json", {cache:"no-store"});
+      if (!r.ok) return null;
+      const h = await r.json();
+      return Array.isArray(h) && h.length ? h : null;
+    } catch (e) { return null; }
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  async function getJson(url, tries = 2) {
+    for (let i = 0; i < tries; i++) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) return await r.json();
+        if (r.status !== 429) throw new Error(String(r.status));
+      } catch (e) { if (i === tries - 1) throw e; }
+      await sleep(400);
+    }
+  }
+
+  function shape(c) {
+    const p = c.cardmarket && c.cardmarket.prices;
+    return {
+      id:c.id, name:c.name,
+      set:c.set ? c.set.name : "", number:c.number || "",
+      year:c.set && c.set.releaseDate ? c.set.releaseDate.slice(0,4) : "",
+      img:(c.images && (c.images.large || c.images.small)) || "",
+      eur: p ? (p.trendPrice ?? p.averageSellPrice ?? p.avg30 ?? null) : null
+    };
+  }
+
+  // Prices every card we care about in one parallel burst rather than a queue.
+  async function fetchCards(includeGrails, extraIds) {
+    const jobs = [];
+    if (includeGrails) for (const q of LIVE_QUERIES) {
+      jobs.push(getJson(`${TCG}?q=${encodeURIComponent(q)}&pageSize=20&select=${FIELDS}`)
+        .then(d => ({pick: "best", data: d})));
+    }
+    if (extraIds && extraIds.length) {
+      const q = extraIds.map(id => "id:" + id).join(" OR ");
+      jobs.push(getJson(`${TCG}?q=${encodeURIComponent(q)}&pageSize=60&select=${FIELDS}`)
+        .then(d => ({pick: "all", data: d})));
+    }
+    if (!jobs.length) return {};
+
+    const cards = {};
+    for (const r of await Promise.allSettled(jobs)) {
+      if (r.status !== "fulfilled" || !r.value) continue;
+      const list = (r.value.data.data || []).map(shape).filter(c => c.eur != null);
+      if (r.value.pick === "best") {
+        const best = list.sort((a, b) => b.eur - a.eur)[0];
+        if (best) cards[best.id] = best;
+      } else {
+        for (const c of list) cards[c.id] = c;
+      }
+    }
+    return cards;
+  }
+
+  // Fold two histories together by date. Cards from `primary` win on conflict.
+  function mergeHistories(primary, secondary) {
+    const byDate = new Map();
+    for (const h of secondary) byDate.set(h.d, {d:h.d, btc:h.btc, cards:{...(h.cards||{})}});
+    for (const h of primary) {
+      const prev = byDate.get(h.d);
+      byDate.set(h.d, {d:h.d, btc:h.btc || (prev && prev.btc),
+        cards: {...(prev ? prev.cards : {}), ...(h.cards||{})}});
+    }
+    return [...byDate.values()].sort((a,b) => (a.d < b.d ? -1 : 1));
+  }
+
+  /* ---------- selectors ---------- */
+  const latest = () => state.history[state.history.length - 1];
+  function championId() {
+    const l = latest();
+    if (!l || !l.cards) return null;
+    const entries = Object.entries(l.cards);
+    if (!entries.length) return null;
+    return entries.sort((a,b) => b[1].eur - a[1].eur)[0][0];
+  }
+  function windowed() {
+    if (!state.range) return state.history;
+    const cut = new Date();
+    cut.setDate(cut.getDate() - state.range);
+    const key = cut.toISOString().slice(0,10);
+    const w = state.history.filter(h => h.d >= key);
+    return w.length >= 2 ? w : state.history;
+  }
+  function series(id) {
+    // Card prices are quoted in euros. Converting each day with that day's
+    // bitcoin-derived FX rate let bitcoin's own moves leak into the card's
+    // return — so the whole series uses one fixed rate and the card's
+    // percentage change reflects only its euro price.
+    const l = latest();
+    if (!l) return [];
+    const fx = l.btc.gbp / l.btc.eur;
+
+    const o = overrideFor(id);
+    let k = 1;
+    if (o != null && l.cards[id]) {
+      const market = l.cards[id].eur * fx;
+      if (market > 0) k = o / market;
+    }
+    return windowed()
+      .filter(h => h.cards && h.cards[id] && h.btc)
+      .map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id].eur * fx * k}));
+  }
+
+  /* ---------- render ---------- */
+  const pctText = v => (v >= 0 ? "+" : "") + dec.format(v) + "%";
+  const pctClass = v => v > 0.05 ? "up" : v < -0.05 ? "down" : "flat";
+
+  function renderChampion() {
+    const l = latest();
+    if (!l) return;
+    const c = l.cards[state.cardId];
+    if (!c) return;
+    const gbp = priceOf(state.cardId, l);
+    if (gbp == null) return;
+    const ov = overrideFor(state.cardId);
+
+    if (c.img) { el("art").src = c.img; el("art").alt = c.name; el("art").hidden = false; }
+    el("cardName").textContent = c.name;
+    el("cardMeta").textContent = [c.set, c.number, c.year].filter(Boolean).join(" · ");
+    el("priceEdit").innerHTML = gbpFine.format(gbp) +
+      (ov != null ? " <b>· your price</b>" : " <b>· raw, ungraded</b>");
+    el("priceClear").hidden = ov == null;
+
+    const count = gbp > 0 ? l.btc.gbp / gbp : null;
+    el("buysNum").textContent = count == null ? "—"
+      : count >= 100 ? num.format(Math.round(count))
+      : count >= 1   ? dec.format(count)
+      :                count.toFixed(2);
+
+    el("cardSats").textContent = num.format(Math.round(gbp / l.btc.gbp * 1e8)) + " sats each";
+    const day = new Date().toISOString().slice(0, 10);
+    el("stamp").textContent = l.d === day
+      ? "live · " + new Date().toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"})
+      : "updated " + pretty(l.d);
+    el("headPrice").textContent = gbpFmt.format(l.btc.gbp);
+
+    const isChamp = state.cardId === championId();
+    el("champLabel").textContent = isChamp ? "Priciest card on the board" : "Comparing against";
+    el("crown").hidden = !isChamp;
+  }
+
+  function renderBoard() {
+    const s = series(state.cardId);
+    const bEl = el("btcPct"), pEl = el("pkmPct"), v = el("verdict");
+    const l = latest();
+
+    el("btcDetail").textContent = l ? gbpFmt.format(l.btc.gbp) + " per coin" : "loading";
+
+    if (s.length < 2) {
+      bEl.className = pEl.className = "side__pct flat";
+      bEl.textContent = pEl.textContent = "—";
+      el("pkmDetail").textContent = "needs two days of data";
+      v.innerHTML = state.hosted
+        ? `Tracking starts today.<small>The first snapshot is in. Come back tomorrow and a gap opens up.</small>`
+        : `Live prices only.<small>Host this and the daily job starts building history. Until then there's nothing to compare against.</small>`;
+      return;
+    }
+
+    const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
+    const p = (s[s.length-1].card / s[0].card - 1) * 100;
+
+    bEl.className = "side__pct " + pctClass(b); bEl.textContent = pctText(b);
+    pEl.className = "side__pct " + pctClass(p); pEl.textContent = pctText(p);
+    el("pkmDetail").textContent = `${s.length} snapshots · raw price`;
+
+    const gap = Math.abs(b - p);
+    const leader = b > p ? "Bitcoin" : latest().cards[state.cardId].name;
+    v.innerHTML = gap < 0.5
+      ? `Dead heat.<small>Less than half a point between them since ${pretty(s[0].d)}.</small>`
+      : `${leader} is ahead by ${dec.format(gap)} points.<small>Since ${pretty(s[0].d)}. ${b > p ? "Screenshot it." : "Take it graciously."}</small>`;
+  }
+
+  function renderChart() {
+    const host = el("chartHost");
+    const s = series(state.cardId);
+    const l = latest();
+    el("legName").textContent = l && l.cards[state.cardId] ? l.cards[state.cardId].name : "Card";
+
+    if (s.length < 2) {
+      host.innerHTML = `<div class="state"><strong>${s.length ? "One snapshot so far." : "No history yet."}</strong>The chart needs two days.</div>`;
+      el("legBtc").textContent = "—"; el("legCard").textContent = "—";
+      return;
+    }
+
+    const b0 = s[0].btc, c0 = s[0].card;
+    const btcIdx = s.map(p => p.btc / b0 * 100);
+    const cardIdx = s.map(p => p.card / c0 * 100);
+    const all = btcIdx.concat(cardIdx, [100]);
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const pad = Math.max((hi - lo) * 0.12, 2); lo -= pad; hi += pad;
+
+    const W = 700, H = 250, ML = 42, MR = 12, MT = 14, MB = 26;
+    const px = i => ML + (i / (s.length - 1)) * (W - ML - MR);
+    const py = v => MT + (1 - (v - lo) / (hi - lo)) * (H - MT - MB);
+    const path = a => a.map((v,i) => (i ? "L" : "M") + px(i).toFixed(1) + " " + py(v).toFixed(1)).join(" ");
+
+    const ticks = [lo, (lo+hi)/2, hi].map(v => `
+      <line class="grid-line" x1="${ML}" y1="${py(v).toFixed(1)}" x2="${W-MR}" y2="${py(v).toFixed(1)}"/>
+      <text x="${ML-8}" y="${(py(v)+3.5).toFixed(1)}" text-anchor="end">${Math.round(v)}</text>`).join("");
+
+    host.innerHTML = `
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+           aria-label="Bitcoin and card price, both indexed to 100 at the start of the window">
+        ${ticks}
+        <line class="base-line" x1="${ML}" y1="${py(100).toFixed(1)}" x2="${W-MR}" y2="${py(100).toFixed(1)}"/>
+        <path d="${path(cardIdx)}" fill="none" stroke="#7FD8E8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="${path(btcIdx)}" fill="none" stroke="#F7931A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${px(s.length-1).toFixed(1)}" cy="${py(cardIdx[cardIdx.length-1]).toFixed(1)}" r="3.5" fill="#7FD8E8"/>
+        <circle cx="${px(s.length-1).toFixed(1)}" cy="${py(btcIdx[btcIdx.length-1]).toFixed(1)}" r="3.5" fill="#F7931A"/>
+        <text x="${ML}" y="${H-8}">${pretty(s[0].d)}</text>
+        <text x="${W-MR}" y="${H-8}" text-anchor="end">${pretty(s[s.length-1].d)}</text>
+      </svg>`;
+
+    const f = v => (v - 100 >= 0 ? "+" : "") + dec.format(v - 100) + "%";
+    el("legBtc").textContent = f(btcIdx[btcIdx.length-1]);
+    el("legCard").textContent = f(cardIdx[cardIdx.length-1]);
+  }
+
+  function renderPicker() {
+    const l = latest();
+    if (!l) return;
+    const sel = el("pick");
+    sel.innerHTML = "";
+    Object.entries(l.cards)
+      .sort((a,b) => b[1].eur - a[1].eur)
+      .forEach(([id, c]) => {
+        const o = document.createElement("option");
+        o.value = id;
+        o.textContent = `${c.name} — ${c.set}${state.extras[id] ? " (added)" : ""}`;
+        if (id === state.cardId) o.selected = true;
+        sel.appendChild(o);
+      });
+  }
+
+  function renderAll() { renderChampion(); renderBoard(); renderChart(); }
+
+  /* ---------- interactions ---------- */
+  el("frame").addEventListener("pointermove", e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--mx", ((e.clientX-r.left)/r.width*100)+"%");
+    e.currentTarget.style.setProperty("--my", ((e.clientY-r.top)/r.height*100)+"%");
+  }, {passive:true});
+
+  document.querySelectorAll("[data-range]").forEach(b => b.addEventListener("click", () => {
+    state.range = parseInt(b.dataset.range, 10);
+    document.querySelectorAll("[data-range]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderBoard(); renderChart();
+  }));
+
+  /* ---------- battle ---------- */
+  const MOVES = {
+    btc:  {up:["SURGE","BREAKOUT","MOON SHOT"], down:["HODL","DIAMOND HANDS","STACK SATS"]},
+    card: {up:["NOSTALGIA","CHASE RALLY","GRADE BUMP"], down:["SLOW BLEED","BINDER SIT","PRINT RUN"]}
+  };
+  const battle = {running:false, token:0, built:null, mode:"live", hours:12};
+
+  const CHART = h => `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=gbp&days=1`;
+
+  // Replays the last 12 or 24 hours of bitcoin against a card that, intraday,
+  // doesn't move at all — Cardmarket revalues once a day. So every swing on
+  // screen is bitcoin's, which is what makes it worth watching.
+  async function buildBattle(hours) {
+    const d = await getJson(CHART(hours));
+    let pts = (d && d.prices) || [];
+    const cutoff = Date.now() - hours * 3600e3;
+    pts = pts.filter(p => p[0] >= cutoff);
+    if (pts.length < 4) return null;
+
+    const TURNS = Math.min(18, Math.max(5, Math.floor(pts.length / 8)));
+    const idx = [];
+    for (let t = 0; t <= TURNS; t++) idx.push(Math.round(t * (pts.length - 1) / TURNS));
+
+    const turns = [];
+    for (let t = 1; t <= TURNS; t++) {
+      if (idx[t] === idx[t-1]) continue;
+      const a = pts[idx[t-1]][1], b = pts[idx[t]][1];
+      const pct = (b / a - 1) * 100;
+      turns.push({
+        attacker: pct >= 0 ? "btc" : "card",
+        gap: Math.abs(pct), pct,
+        at: new Date(pts[idx[t]][0]).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"})
+      });
+    }
+    if (!turns.length) return null;
+
+    let toCard = 0, toBtc = 0;
+    for (const t of turns) t.attacker === "btc" ? (toCard += t.gap) : (toBtc += t.gap);
+    const worst = Math.max(toCard, toBtc);
+    let scale = 1;
+    if (worst > 96) scale = 96 / worst;
+    else if (worst > 0 && worst < 40) scale = 40 / worst;
+    for (const t of turns) t.dmg = t.gap * scale;
+
+    const l = latest();
+    const foe = l && l.cards[state.cardId];
+    const first = pts[0][1], last = pts[pts.length-1][1];
+
+    return {
+      turns, scaled: Math.abs(scale - 1) > 0.01,
+      foeName: foe ? foe.name : "CARD",
+      foeImg: foe ? foe.img : "",
+      hours,
+      from: new Date(pts[0][0]).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"}),
+      btcEnd: (last / first - 1) * 100,
+      cardEnd: 0
+    };
+  }
+
+  function setHp(side, hp) {
+    const bar = el(side === "btc" ? "heroBar" : "foeBar");
+    const label = el(side === "btc" ? "heroHp" : "foeHp");
+    const v = Math.max(0, hp);
+    bar.style.width = v + "%";
+    bar.style.background = v > 50 ? "#5BD98A" : v > 20 ? "#E8C25A" : "#E8657C";
+    label.textContent = (v >= 100 || v === 0 ? Math.round(v) : v.toFixed(1)) + "/100";
+  }
+
+  async function typeLine(text, token, speed = 16) {
+    const p = el("battleText");
+    p.classList.remove("done");
+    p.textContent = "";
+    for (let i = 0; i < text.length; i++) {
+      if (battle.token !== token) return;
+      p.textContent = text.slice(0, i + 1);
+      await sleep(speed);
+    }
+    p.classList.add("done");
+  }
+
+  function resetStage(b) {
+    el("foeName").textContent = b.foeName.toUpperCase();
+    if (b.foeImg) { el("foeArt").src = b.foeImg; el("foeArt").alt = b.foeName; }
+    el("foeSprite").className = "sprite sprite--foe";
+    el("heroSprite").className = "sprite sprite--hero";
+    el("foeBar").style.transition = "none";
+    el("heroBar").style.transition = "none";
+    setHp("btc", 100); setHp("card", 100);
+    void el("foeBar").offsetWidth;
+    el("foeBar").style.transition = "";
+    el("heroBar").style.transition = "";
+    el("battleNote").textContent = `Last ${b.hours}h from ${b.from} · ` + (b.scaled
+      ? "HP scaled to fit the window — the order and size of the swings are real"
+      : "one HP per percentage point");
+  }
+
+  async function runBattle() {
+    const b = battle.built;
+    if (!b) return;
+    const token = ++battle.token;
+    battle.running = true;
+    el("battleReplay").hidden = true;
+    el("battleSkip").hidden = false;
+
+    resetStage(b);
+    let hpBtc = 100, hpCard = 100;
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return finishBattle(b, token, true);
+
+    // The whole fight fits a fixed budget: more turns means a faster fight,
+    // not a longer one.
+    const BUDGET = 12000, INTRO = 2000, OUTRO = 2600;
+    const perTurn = Math.min(1400, Math.max(520, (BUDGET - INTRO - OUTRO) / b.turns.length));
+    const typeSpeed = perTurn < 700 ? 8 : perTurn < 1000 ? 12 : 16;
+    const hitTime = Math.min(700, perTurn * 0.55);
+    el("foeBar").style.transitionDuration = hitTime + "ms";
+    el("heroBar").style.transitionDuration = hitTime + "ms";
+
+    await typeLine(`A wild ${b.foeName.toUpperCase()} appeared!`, token, typeSpeed);
+    if (battle.token !== token) return;
+    await sleep(INTRO * 0.35);
+
+    await typeLine("BITCOIN, go!", token, typeSpeed);
+    if (battle.token !== token) return;
+    await sleep(INTRO * 0.25);
+
+    for (const t of b.turns) {
+      if (battle.token !== token) return;
+
+      const dir = t.pct >= 0 ? "up" : "down";
+      const pool = MOVES[t.attacker][dir];
+      const move = pool[b.turns.indexOf(t) % pool.length];
+      const who = t.attacker === "btc" ? "BITCOIN" : b.foeName.toUpperCase();
+
+      await typeLine(`${t.at} — ${who} used ${move}! ${pctFine(t.pct)}`, token, typeSpeed);
+      if (battle.token !== token) return;
+      await sleep(perTurn * 0.18);
+
+      const targetEl = t.attacker === "btc" ? el("foeSprite") : el("heroSprite");
+      targetEl.classList.add("is-hit");
+      setTimeout(() => targetEl.classList.remove("is-hit"), hitTime + 200);
+
+      if (t.attacker === "btc") { hpCard = Math.max(0, hpCard - t.dmg); setHp("card", hpCard); }
+      else                      { hpBtc  = Math.max(0, hpBtc  - t.dmg); setHp("btc",  hpBtc);  }
+
+      await sleep(perTurn * 0.55);
+      if (battle.token !== token) return;
+
+      if (hpCard <= 0 || hpBtc <= 0) break;
+    }
+
+    await finishBattle(b, token, false, hpBtc, hpCard, typeSpeed);
+  }
+
+  async function finishBattle(b, token, instant, hpBtc, hpCard, typeSpeed = 12) {
+    const btcWon = b.btcEnd >= b.cardEnd;
+    if (instant) {
+      setHp("btc", btcWon ? 100 : 8);
+      setHp("card", btcWon ? 8 : 100);
+    } else {
+      const fainted = hpBtc <= 0 || hpCard <= 0;
+      if (fainted) {
+        const loserEl = hpCard <= 0 ? el("foeSprite") : el("heroSprite");
+        loserEl.classList.add("is-fainted");
+        await typeLine(`${hpCard <= 0 ? b.foeName.toUpperCase() : "BITCOIN"} fainted!`, token, typeSpeed);
+        if (battle.token !== token) return;
+        await sleep(800);
+      }
+    }
+
+    const winner = btcWon ? "BITCOIN" : b.foeName.toUpperCase();
+    const gap = Math.abs(b.btcEnd - b.cardEnd);
+    await typeLine(`${winner} wins by ${dec.format(gap)} points! ` +
+      `BITCOIN ${pctFine(b.btcEnd)} over ${b.hours}h — ${b.foeName.toUpperCase()} didn't move.`, token, typeSpeed);
+
+    if (battle.token !== token) return;
+    battle.running = false;
+    el("battleSkip").hidden = true;
+    el("battleReplay").hidden = false;
+  }
+
+  async function openBattleReplay() {
+    const token = ++battle.token;
+    el("hoursSeg").hidden = false;
+    el("battleSkip").hidden = true;
+    el("battleReplay").hidden = true;
+    el("battleRematch").hidden = true;
+    el("battleNote").textContent = "";
+    el("battleText").textContent = `Winding back the last ${battle.hours} hours…`;
+    el("battleText").classList.add("done");
+
+    let b = null;
+    try { b = await buildBattle(battle.hours); } catch (e) {}
+    if (battle.token !== token) return;
+
+    if (!b) {
+      battle.built = null;
+      el("battleText").textContent = "Couldn't fetch the intraday prices — the free feed may be throttling. Try Live, or give it a minute.";
+      return;
+    }
+    battle.built = b;
+    runBattle();
+  }
+
+  function openBattle() {
+    el("battle").hidden = false;
+    setMode(battle.mode || "replay");
+  }
+
+  function closeBattle() {
+    battle.token++;
+    battle.running = false;
+    stopLive();
+    el("battle").hidden = true;
+  }
+
+  el("battleBtn").addEventListener("click", openBattle);
+  el("battleClose").addEventListener("click", closeBattle);
+  el("battleReplay").addEventListener("click", runBattle);
+  el("battleSkip").addEventListener("click", () => {
+    const b = battle.built;
+    if (!b) return;
+    battle.token++;
+    const token = battle.token;
+    resetStage(b);
+    finishBattle(b, token, true);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !el("battle").hidden) closeBattle();
+  });
+
+  /* ---------- live bitcoin polling ---------- */
+  const POLL_MS = 5 * 60 * 1000;
+  let lastPoll = 0;
+
+  async function pollBtc() {
+    const day = new Date().toISOString().slice(0, 10);
+    let btc = null;
+    try {
+      const d = await getJson(CG);
+      btc = d && d.bitcoin;
+    } catch (e) { return; }
+    if (!btc || !btc.gbp) return;
+
+    lastPoll = Date.now();
+    const l = latest();
+    if (l && l.d === day) l.btc = btc;
+    else state.history = mergeSnapshot(state.history, {d: day, btc, cards: {}});
+
+    writeLocal();
+    renderChampion();
+    renderBoard();
+    renderChart();
+  }
+
+  setInterval(pollBtc, POLL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - lastPoll > POLL_MS) pollBtc();
+  });
+
+  /* ---------- live battle ---------- */
+  // Bitcoin moves constantly but card prices only revalue daily, so intraday the
+  // card stands still and bitcoin's swing is the whole fight. SENS turns a 1%
+  // move into 20 HP, so a 5% run is a knockout — and a 0.01% twitch still lands.
+  const SENS = 20, TICK_MS = 4000;
+  const live = {on:false, timer:null, countdown:null, hpBtc:100, hpCard:100,
+                lastRatio:null, nextAt:0, backoff:TICK_MS, over:false};
+
+  // Small moves need more decimals than the rest of the page uses.
+  const pctFine = v => {
+    const a = Math.abs(v);
+    return (v >= 0 ? "+" : "") + v.toFixed(a >= 1 ? 2 : a >= 0.1 ? 3 : 4) + "%";
+  };
+  const hpFine = v => v.toFixed(v >= 1 ? 1 : 2);
+
+  function currentRatio() {
+    const l = latest();
+    if (!l) return null;
+    const cardGbp = priceOf(state.cardId, l);
+    return cardGbp > 0 ? l.btc.gbp / cardGbp : null;
+  }
+
+  // Coinbase spot updates in real time. CoinGecko's free tier caches for about a
+  // minute, which is why ticks used to return an identical price over and over.
+  async function fetchSpotGbp() {
+    const d = await getJson(SPOT, 1);
+    const v = d && d.data && parseFloat(d.data.amount);
+    return v > 0 ? v : null;
+  }
+
+  function floatDamage(side, text, colour) {
+    const s = document.createElement("span");
+    s.className = "dmg " + (side === "card" ? "dmg--foe" : "dmg--hero");
+    s.textContent = text;
+    s.style.color = colour;
+    el("battleStage").appendChild(s);
+    setTimeout(() => s.remove(), 1150);
+  }
+
+  function setLowFlash() {
+    el("foeBar").classList.toggle("is-low", live.hpCard <= 20 && live.hpCard > 0);
+    el("heroBar").classList.toggle("is-low", live.hpBtc <= 20 && live.hpBtc > 0);
+  }
+
+  async function liveTick() {
+    if (!live.on || live.over) return;
+
+    let gbp = null;
+    try {
+      gbp = await fetchSpotGbp();
+      if (!gbp) {                                   // fall back to CoinGecko
+        const d = await getJson(CG, 1);
+        gbp = d && d.bitcoin && d.bitcoin.gbp;
+      }
+    } catch (e) {
+      live.backoff = Math.min(30000, live.backoff * 2);
+      el("liveTick").textContent = "feed throttled — backing off";
+      scheduleTick();
+      return;
+    }
+    if (!gbp) { scheduleTick(); return; }
+    live.backoff = TICK_MS;
+
+    const day = new Date().toISOString().slice(0, 10);
+    const l = latest();
+    if (l && l.d === day) l.btc = {...l.btc, gbp};   // keep eur/usd for FX
+    lastPoll = Date.now();
+    renderChampion(); renderBoard();
+
+    const ratio = currentRatio();
+    el("livePrice").textContent = gbpFine.format(gbp);
+    el("liveRatio").textContent = ratio ? dec.format(ratio) + " cards per coin" : "—";
+
+    if (ratio && live.lastRatio) {
+      const movePct = (ratio / live.lastRatio - 1) * 100;
+      const dmg = Math.abs(movePct) * SENS;
+      const foe = latest().cards[state.cardId];
+      const foeName = (foe ? foe.name : "CARD").toUpperCase();
+
+      if (movePct === 0) {
+        await typeLine("Both sides circling… price hasn't moved.", ++battle.token, 10);
+      } else if (movePct > 0) {
+        live.hpCard = Math.max(0, live.hpCard - dmg);
+        setHp("card", live.hpCard);
+        el("foeSprite").classList.add("is-hit");
+        setTimeout(() => el("foeSprite").classList.remove("is-hit"), 700);
+        floatDamage("card", "−" + hpFine(dmg), "#E8657C");
+        await typeLine(`BITCOIN used SURGE! ${pctFine(movePct)} — ${hpFine(dmg)} HP off ${foeName}.`, ++battle.token, 9);
+      } else {
+        live.hpBtc = Math.max(0, live.hpBtc - dmg);
+        setHp("btc", live.hpBtc);
+        el("heroSprite").classList.add("is-hit");
+        setTimeout(() => el("heroSprite").classList.remove("is-hit"), 700);
+        floatDamage("btc", "−" + hpFine(dmg), "#E8657C");
+        await typeLine(`${foeName} held firm! ${pctFine(movePct)} — ${hpFine(dmg)} HP off BITCOIN.`, ++battle.token, 9);
+      }
+      setLowFlash();
+    }
+    live.lastRatio = ratio;
+
+    if (live.hpCard <= 0 || live.hpBtc <= 0) return endLive();
+    scheduleTick();
+  }
+
+  function scheduleTick() {
+    clearTimeout(live.timer);
+    live.nextAt = Date.now() + live.backoff;
+    live.timer = setTimeout(liveTick, live.backoff);
+  }
+
+  async function endLive() {
+    live.over = true;
+    clearTimeout(live.timer);
+    const btcWon = live.hpCard <= 0;
+    const foe = latest().cards[state.cardId];
+    const name = (foe ? foe.name : "CARD").toUpperCase();
+    const loserEl = btcWon ? el("foeSprite") : el("heroSprite");
+    loserEl.classList.add("is-fainted");
+    el("foeBar").classList.remove("is-low");
+    el("heroBar").classList.remove("is-low");
+    await typeLine(`${btcWon ? name : "BITCOIN"} fainted! ${btcWon ? "BITCOIN" : name} wins.`, ++battle.token, 12);
+    el("liveTick").textContent = "fight over";
+    el("battleRematch").hidden = false;
+  }
+
+  function startLive() {
+    battle.token++;
+    live.on = true; live.over = false;
+    live.hpBtc = 100; live.hpCard = 100;
+    live.backoff = TICK_MS;
+    live.lastRatio = currentRatio();
+
+    const foe = latest() && latest().cards[state.cardId];
+    el("foeName").textContent = foe ? foe.name.toUpperCase() : "CARD";
+    if (foe && foe.img) { el("foeArt").src = foe.img; el("foeArt").alt = foe.name; }
+    el("foeSprite").className = "sprite sprite--foe";
+    el("heroSprite").className = "sprite sprite--hero";
+    setHp("btc", 100); setHp("card", 100);
+    el("foeBar").style.transitionDuration = "550ms";
+    el("heroBar").style.transitionDuration = "550ms";
+    setLowFlash();
+
+    el("liveBar").hidden = false;
+    el("battleSkip").hidden = true;
+    el("battleReplay").hidden = true;
+    el("battleRematch").hidden = true;
+    el("battleNote").textContent = `Live spot price · a 1% move is ${SENS} HP · the card only revalues daily, so bitcoin swings and it takes it`;
+    typeLine("Live battle! Every tick is a real price move.", battle.token, 12);
+
+    clearInterval(live.countdown);
+    live.countdown = setInterval(() => {
+      if (!live.on || live.over) return;
+      const s = Math.max(0, Math.ceil((live.nextAt - Date.now()) / 1000));
+      el("liveTick").textContent = "next tick " + s + "s";
+    }, 250);
+
+    live.backoff = 1200;
+    scheduleTick();
+    live.backoff = TICK_MS;
+  }
+
+  function stopLive() {
+    live.on = false;
+    clearTimeout(live.timer);
+    clearInterval(live.countdown);
+    el("liveBar").hidden = true;
+  }
+
+  function setMode(mode) {
+    document.querySelectorAll("[data-mode]").forEach(x =>
+      x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
+    battle.mode = mode;
+    if (mode === "live") { battle.token++; el("hoursSeg").hidden = true; startLive(); }
+    else { stopLive(); el("battleRematch").hidden = true; openBattleReplay(); }
+  }
+
+  document.querySelectorAll("[data-mode]").forEach(b =>
+    b.addEventListener("click", () => setMode(b.dataset.mode)));
+  document.querySelectorAll("[data-hours]").forEach(b =>
+    b.addEventListener("click", () => {
+      battle.hours = parseInt(b.dataset.hours, 10);
+      document.querySelectorAll("[data-hours]").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      openBattleReplay();
+    }));
+  el("battleRematch").addEventListener("click", startLive);
+
+  /* ---------- price override ---------- */
+  function openPriceEdit() {
+    const input = el("priceInput");
+    input.value = state.overrides[state.cardId] ?? "";
+    el("priceEdit").hidden = true;
+    el("priceClear").hidden = true;
+    input.hidden = false;
+    input.focus();
+    input.select();
+  }
+  function commitPriceEdit() {
+    const input = el("priceInput");
+    const v = parseFloat(input.value);
+    if (v > 0) state.overrides[state.cardId] = v;
+    else delete state.overrides[state.cardId];
+    input.hidden = true;
+    el("priceEdit").hidden = false;
+    writeLocal();
+    renderAll();
+  }
+  el("priceEdit").addEventListener("click", openPriceEdit);
+  el("priceInput").addEventListener("blur", commitPriceEdit);
+  el("priceInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+    if (e.key === "Escape") { e.target.value = state.overrides[state.cardId] ?? ""; e.target.blur(); }
+  });
+  el("priceClear").addEventListener("click", () => {
+    delete state.overrides[state.cardId];
+    writeLocal();
+    renderAll();
+  });
+
+  el("pick").addEventListener("change", () => {
+    state.cardId = el("pick").value;
+    writeLocal();
+    renderAll();
+  });
+
+  async function chooseCard(c) {
+    state.extras[c.id] = {name:c.name, set:c.set, number:c.number, year:c.year, img:c.img};
+    const l = latest();
+    const day = new Date().toISOString().slice(0,10);
+    if (l && l.d === day) l.cards[c.id] = c;
+    else if (l) state.history = mergeSnapshot(state.history, {d:day, btc:l.btc, cards:{[c.id]: c}});
+    state.cardId = c.id;
+    el("q").value = "";
+    el("results").innerHTML = "";
+    await writeLocal();
+    renderPicker();
+    renderAll();
+  }
+
+  async function runSearch() {
+    const q = el("q").value.trim(), list = el("results");
+    if (!q) return;
+    el("go").disabled = true;
+    list.innerHTML = '<li class="msg">Searching…</li>';
+    try {
+      const d = await getJson(`${TCG}?q=${encodeURIComponent(`name:"${q.replace(/"/g,"")}*"`)}&pageSize=24&select=${FIELDS}`);
+      const found = (d.data || []).map(shape)
+        .filter(c => c.eur != null)
+        .sort((a,b) => b.eur - a.eur)
+        .slice(0, 12);
+      if (!found.length) {
+        list.innerHTML = '<li class="msg">No priced match. Cardmarket may not track that one.</li>';
+        return;
+      }
+      list.innerHTML = "";
+      for (const c of found) {
+        const li = document.createElement("li");
+        const b = document.createElement("button");
+        b.className = "chip";
+        const gbp = latest() ? gbpOf(c.eur, latest().btc) : null;
+        b.innerHTML = `${c.name}<small>${[c.set, c.number, c.year].filter(Boolean).join(" · ")}${
+          gbp ? " · " + gbpFine.format(gbp) : ""}</small>`;
+        b.addEventListener("click", () => chooseCard(c));
+        li.appendChild(b);
+        list.appendChild(li);
+      }
+    } catch (e) {
+      list.innerHTML = '<li class="msg">Card feed unavailable — try again shortly.</li>';
+    } finally { el("go").disabled = false; }
+  }
+  el("go").addEventListener("click", runSearch);
+  el("q").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); runSearch(); } });
+
+  /* ---------- boot ---------- */
+  // Fold a fresh snapshot into the stored history: same day overwrites,
+  // and any card missing from today's fetch keeps its last known price
+  // so a rate-limited request can't silently drop it off the board.
+  function mergeSnapshot(history, snap) {
+    const prev = history[history.length - 1];
+    if (prev) {
+      for (const [id, c] of Object.entries(prev.cards || {})) {
+        if (!snap.cards[id]) snap.cards[id] = c;
+      }
+    }
+    const i = history.findIndex(h => h.d === snap.d);
+    if (i >= 0) history[i] = snap; else history.push(snap);
+    history.sort((a, b) => (a.d < b.d ? -1 : 1));
+    return history;
+  }
+
+  // Every load starts on the priciest card. A manual pick lasts the session only.
+  function pickCard() {
+    state.cardId = championId();
+  }
+
+  async function boot() {
+    const local = await readLocal();
+    const hosted = await loadHistory();
+    state.hosted = !!hosted;
+    state.extras = local.extras || {};
+    state.overrides = local.overrides || {};
+    state.history = mergeHistories(hosted || [], local.history || []);
+
+    // 1. Anything already stored goes on screen straight away.
+    if (state.history.length) {
+      pickCard();
+      renderPicker();
+      renderAll();
+    }
+
+    const day = new Date().toISOString().slice(0, 10);
+
+    // 2. Bitcoin is one quick call — show it without waiting on card prices.
+    let btc = null;
+    try {
+      const d = await getJson(CG);
+      btc = d && d.bitcoin;
+    } catch (e) {}
+
+    if (btc && btc.gbp) {
+      state.history = mergeSnapshot(state.history, {d: day, btc, cards: {}});
+      if (state.history.length) { pickCard(); renderPicker(); renderAll(); }
+    } else if (!state.history.length) {
+      el("cardName").textContent = "Price feed unreachable";
+      el("verdict").textContent = "Couldn't reach the price feeds. Reload in a moment.";
+      return;
+    }
+
+    // 3. Card prices, all requested at once.
+    const cards = await fetchCards(!state.hosted, Object.keys(state.extras));
+    if (Object.keys(cards).length) {
+      const l = latest();
+      state.history = mergeSnapshot(state.history, {d: day, btc: btc || (l && l.btc), cards});
+    }
+
+    pickCard();
+    await writeLocal();
+    renderPicker();
+    renderAll();
+  }
+
+  boot();
+})();
+
+// ---------- install / service worker ----------
+(() => {
+  const el = id => document.getElementById(id);
+  const status = (msg, warn) => {
+    const s = el("pwaStatus");
+    if (!s) return;
+    s.textContent = msg;
+    s.classList.toggle("warn", !!warn);
+  };
+
+  const standalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const secure = window.isSecureContext;
+
+  if (standalone) { status("Running as an installed app."); return; }
+
+  // Chrome fires this only once every install requirement is met. Catching it
+  // gives us a real button instead of waiting for the browser's own prompt.
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferred = e;
+    const btn = el("installBtn");
+    btn.hidden = false;
+    status("Ready to install.");
+    btn.addEventListener("click", async () => {
+      btn.hidden = true;
+      deferred.prompt();
+      const { outcome } = await deferred.userChoice;
+      deferred = null;
+      status(outcome === "accepted" ? "Installing…" : "Install dismissed.");
+    }, { once: true });
+  });
+
+  window.addEventListener("appinstalled", () => {
+    el("installBtn").hidden = true;
+    status("Installed. Open it from your home screen.");
+  });
+
+  if (!secure) {
+    status("Not installable: needs to be served over https. Opening the file directly won't do it — put it on GitHub Pages.", true);
+    return;
+  }
+  if (!("serviceWorker" in navigator)) {
+    status("Not installable: this browser has no service worker support.", true);
+    return;
+  }
+
+  window.addEventListener("load", async () => {
+    // Verify the manifest and its icons actually resolve. A 404 on any icon is
+    // the usual reason a browser offers a plain shortcut instead of an install.
+    try {
+      const res = await fetch("manifest.json", {cache:"no-store"});
+      if (!res.ok) { status("manifest.json is missing (" + res.status + "). Upload it next to index.html.", true); return; }
+      const m = await res.json();
+      const missing = [];
+      for (const icon of m.icons || []) {
+        try {
+          const r = await fetch(icon.src, {method:"GET", cache:"no-store"});
+          if (!r.ok) missing.push(icon.src);
+        } catch (e) { missing.push(icon.src); }
+      }
+      if (missing.length) {
+        status("Icons not found: " + missing.join(", ") + " — upload them next to index.html.", true);
+        return;
+      }
+    } catch (e) {
+      status("Couldn't read manifest.json: " + e.message, true);
+      return;
+    }
+
+    navigator.serviceWorker.register("sw.js")
+      .then(() => {
+        if (isIOS) {
+          status("On iPhone: tap Share, then Add to Home Screen.");
+        } else {
+          setTimeout(() => {
+            if (deferred || el("installBtn").hidden === false) return;
+            status("Manifest and icons all load. If the menu still says Add rather than Install, close the tab and reopen the page once.");
+          }, 3500);
+        }
+      })
+      .catch(err => status("Service worker failed: " + err.message, true));
+  });
+})();
+</script>
+</body>
+</html>
