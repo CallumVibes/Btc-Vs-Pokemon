@@ -569,6 +569,9 @@
       year:c.set && c.set.releaseDate ? c.set.releaseDate.slice(0,4) : "",
       img:(c.images && (c.images.large || c.images.small)) || "",
       eur: p ? (p.trendPrice ?? p.averageSellPrice ?? p.avg30 ?? null) : null,
+      // What we compare over time. trendPrice is a sticky model output; avg1 is
+      // the average of actual sales yesterday and moves when the market moves.
+      cmp: p ? (p.avg1 ?? p.averageSellPrice ?? p.avg7 ?? p.trendPrice ?? null) : null,
       // Cardmarket's rolling averages. Not a true history, but enough to
       // reconstruct roughly where the price has been over the last month.
       sell:  p ? (p.averageSellPrice ?? null) : null,
@@ -653,7 +656,7 @@
     }
     const real = windowed()
       .filter(h => h.cards && h.cards[id] && h.btc)
-      .map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id].eur * fx * k}));
+      .map(h => ({d:h.d, btc:h.btc.gbp, card:(h.cards[id].cmp ?? h.cards[id].eur) * fx * k}));
     return bestSeries(id, state.range, real);
   }
 
@@ -734,9 +737,11 @@
 
     bEl.className = "side__pct " + pctClass(b); bEl.textContent = pctText(b);
     pEl.className = "side__pct " + pctClass(p); pEl.textContent = pctText(p);
+    const moved = s.some(p => Math.abs(p.card - s[0].card) > 1e-9);
     el("pkmDetail").textContent = isDerived(s)
       ? "from Cardmarket 7 & 30-day averages"
-      : `${s.length} snapshots · raw price`;
+      : moved ? `${s.length} snapshots · raw price`
+              : `Cardmarket hasn't repriced it in ${Math.round(span)} days`;
 
     const gap = Math.abs(b - p);
     const leader = b > p ? "Bitcoin" : latest().cards[state.cardId].name;
@@ -1279,7 +1284,7 @@
       const key = cut.toISOString().slice(0, 10);
       rows = rows.filter(h => h.d >= key);
     }
-    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id].eur * fx * k}));
+    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:(h.cards[id].cmp ?? h.cards[id].eur) * fx * k}));
     return bestSeries(id, days, real);
   }
 
@@ -1357,7 +1362,8 @@
       <li class="${r.id === state.cardId ? "is-current" : ""}">
         <span class="rank">${i + 1}</span>
         ${r.c.img ? `<img src="${r.c.img}" alt="" loading="lazy">` : ""}
-        <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}</small></span>
+        <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}${
+          r.c.avg1 == null && r.c.cmp == null ? " · trend only" : ""}</small></span>
         <span class="sats">${num.format(Math.round(r.gbp / l.btc.gbp * 1e8))}
           <small>${gbpFmt.format(r.gbp)}</small></span>
       </li>`).join("");
