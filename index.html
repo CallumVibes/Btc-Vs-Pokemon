@@ -654,9 +654,9 @@
       const market = l.cards[id].eur * fx;
       if (market > 0) k = o / market;
     }
-    const real = windowed()
-      .filter(h => h.cards && h.cards[id] && h.btc)
-      .map(h => ({d:h.d, btc:h.btc.gbp, card:(h.cards[id].cmp ?? h.cards[id].eur) * fx * k}));
+    const rows = windowed().filter(h => h.cards && h.cards[id] && h.btc);
+    const field = metricFor(rows, id);
+    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id][field] * fx * k}));
     return bestSeries(id, state.range, real);
   }
 
@@ -1241,6 +1241,23 @@
 
   // Real snapshots always win. The reconstruction only fills in where the daily
   // job hasn't accumulated enough yet.
+  // Which price field to use across a whole series. Only the responsive metric
+  // if every point in the window carries it — otherwise the sticky one for all.
+  function metricFor(rows, id) {
+    return rows.every(h => h.cards[id] && h.cards[id].cmp != null) ? "cmp" : "eur";
+  }
+
+  // A card cannot plausibly move this much in a day. If it appears to, the
+  // series is mixing measurements rather than tracking a market.
+  const MAX_DAILY = 25;
+  function sane(series) {
+    for (let i = 1; i < series.length; i++) {
+      const a = series[i-1].card, b = series[i].card;
+      if (a > 0 && Math.abs(b / a - 1) * 100 > MAX_DAILY) return false;
+    }
+    return true;
+  }
+
   function bestSeries(id, days, real) {
     // Two snapshots a day apart tell you nothing about a month. Real data only
     // wins once it actually moves and covers a decent slice of the window.
@@ -1248,7 +1265,7 @@
     const spanDays = real.length >= 2
       ? (new Date(real[real.length-1].d) - new Date(real[0].d)) / 86400000 : 0;
     const enough = real.length >= 2 && !flat && (!days || spanDays >= days * 0.6);
-    if (enough) return real;
+    if (enough && sane(real)) return real;
     const d = derivedSeries(id, days);
     return d.length >= 2 ? d : real;
   }
@@ -1284,7 +1301,8 @@
       const key = cut.toISOString().slice(0, 10);
       rows = rows.filter(h => h.d >= key);
     }
-    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:(h.cards[id].cmp ?? h.cards[id].eur) * fx * k}));
+    const field = metricFor(rows, id);
+    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id][field] * fx * k}));
     return bestSeries(id, days, real);
   }
 
