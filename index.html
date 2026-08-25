@@ -423,6 +423,7 @@
   <section class="chart-wrap">
     <div class="chart-head">
       <h2 class="chart-title">Since the start of the window</h2>
+      <p class="panel__hint" id="chartHint"></p>
     </div>
     <div class="legend">
       <span><i class="swatch" style="background:#F7931A"></i>Bitcoin <b id="legBtc" style="color:#F0E7D2;margin-left:4px">—</b></span>
@@ -465,7 +466,6 @@
   "use strict";
 
   const CG = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,eur,usd";
-  const SPOT = "https://api.coinbase.com/v2/prices/BTC-GBP/spot";
   const TCG = "https://api.pokemontcg.io/v2/cards";
   const FIELDS = "id,name,number,images,set,rarity,cardmarket";
   const LIVE_QUERIES = [
@@ -630,8 +630,9 @@
     const cut = new Date();
     cut.setDate(cut.getDate() - state.range);
     const key = cut.toISOString().slice(0,10);
-    const w = state.history.filter(h => h.d >= key);
-    return w.length >= 2 ? w : state.history;
+    // Return only what's actually inside the window. Falling back to the whole
+    // history here meant a 30-day view could quietly show all-time data.
+    return state.history.filter(h => h.d >= key);
   }
   function series(id) {
     // Card prices are quoted in euros. Converting each day with that day's
@@ -716,6 +717,16 @@
       return;
     }
 
+    const span = (new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000;
+    const covers = !state.range || span >= state.range * 0.6;
+    if (!covers) {
+      bEl.className = pEl.className = "side__pct flat";
+      bEl.textContent = pEl.textContent = "—";
+      el("pkmDetail").textContent = `only ${Math.round(span)} days of card data`;
+      v.innerHTML = `Not enough card history for this window.<small>Covered so far: ${Math.round(span)} of ${state.range} days. Try a shorter range.</small>`;
+      return;
+    }
+
     const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
     const p = (s[s.length-1].card / s[0].card - 1) * 100;
 
@@ -746,9 +757,10 @@
       el("legBtc").textContent = "—"; el("legCard").textContent = "—";
       return;
     }
-    el("chartHint").textContent = isDerived(s)
-      ? "Card line reconstructed from Cardmarket's rolling averages until the daily job builds real snapshots."
-      : "Both rebased to 100 at the start of the window.";
+    const shown = Math.round((new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000);
+    el("chartHint").textContent = (isDerived(s)
+      ? "Card line reconstructed from Cardmarket's rolling averages. "
+      : "Both rebased to 100 at the start of the window. ") + `Showing ${shown} days.`;
 
     const b0 = s[0].btc, c0 = s[0].card;
     const btcIdx = s.map(p => p.btc / b0 * 100);
@@ -856,13 +868,15 @@
   // card sits still, which is the truth: Cardmarket revalues once a day.
   function cardPriceAt(ts, fx) {
     const day = new Date(ts).toISOString().slice(0, 10);
-    let best = null;
+    let best = null, earliest = null;
     for (const h of state.history) {
       if (!h.cards || !h.cards[state.cardId]) continue;
-      if (h.d <= day || !best) best = h;
-      if (h.d > day && best) break;
+      if (!earliest) earliest = h;
+      if (h.d <= day) best = h; else break;
     }
-    return best ? best.cards[state.cardId].eur * fx : null;
+    // Before our records start, use the earliest we have rather than a future price.
+    const use = best || earliest;
+    return use ? use.cards[state.cardId].eur * fx : null;
   }
 
   async function buildBattle(days) {
@@ -1279,12 +1293,20 @@
     let btcWins = 0, decided = 0, anyEst = false;
 
     for (const w of WINDOWS) {
-      const b = btcReturnOver(w.days);
       const s = seriesDays(state.cardId, w.days);
+      // Bitcoin must be measured over exactly the period the card covers,
+      // or "all time" ends up pitting a year of one against a month of the other.
+      const cardSpan = s.length >= 2
+        ? (new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000 : 0;
+      const b = btcReturnOver(w.days || cardSpan);
 
-      // The reconstruction only reaches back 30 days — it can't speak for a year.
-      const derivedTooShort = isDerived(s) && w.days > 30;
-      const c = (s.length >= 2 && !derivedTooShort)
+      // A window can only be called if the card data actually spans it. Two
+      // snapshots a day apart say nothing about a year, and the reconstruction
+      // only reaches back 30 days.
+      const span = s.length >= 2
+        ? (new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000 : 0;
+      const covers = w.days ? span >= w.days * 0.6 : span >= 2;
+      const c = (s.length >= 2 && covers)
         ? (s[s.length-1].card / s[0].card - 1) * 100 : null;
 
       if (b == null || c == null) { rows.push({...w, na:true}); continue; }
@@ -1349,7 +1371,14 @@
 
   // How many consecutive days one side has beaten the other.
   function streak() {
-    const s = seriesDays(state.cardId, 0);
+    // Only real snapshots. The reconstruction is a smooth interpolation, so it
+    // would report a 30-day "run" that never happened.
+    const l = latest();
+    if (!l) return null;
+    const fx = l.btc.gbp / l.btc.eur;
+    const s = state.history
+      .filter(h => h.cards && h.cards[state.cardId] && h.btc && !h.est)
+      .map(h => ({btc:h.btc.gbp, card:h.cards[state.cardId].eur * fx}));
     if (s.length < 3) return null;
     let side = null, count = 0;
     for (let i = s.length - 1; i > 0; i--) {
@@ -1555,10 +1584,13 @@
 
     // scoreboard, two columns across the lower half
     const s = series(state.cardId);
+    const span = s.length >= 2
+      ? (new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000 : 0;
+    const covers = !state.range || span >= state.range * 0.6;
     const yTop = cardY + cardH + 150;
     c.fillStyle = "rgba(240,231,210,.14)"; c.fillRect(64, yTop - 78, W - 128, 2);
 
-    if (s.length >= 2) {
+    if (s.length >= 2 && covers) {
       const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
       const cp = (s[s.length-1].card / s[0].card - 1) * 100;
       const cols = [
@@ -1579,7 +1611,9 @@
       c.fillText(`since ${pretty(s[0].d)}${est}`, 64, yTop + 164);
     } else {
       c.fillStyle = "#8A93B8"; c.font = "400 26px 'JetBrains Mono', monospace";
-      c.fillText("Tracking just started — no window to compare yet.", 64, yTop + 10);
+      c.fillText(span >= 2
+        ? `Only ${Math.round(span)} days of card data — too short to call this window.`
+        : "Tracking just started — no window to compare yet.", 64, yTop + 10);
     }
 
     c.fillStyle = "#8A93B8"; c.font = "400 21px 'JetBrains Mono', monospace";
@@ -1762,8 +1796,10 @@
     // 3. Card prices, all requested at once.
     // Grail queries run when there's no committed data to lean on — that
     // includes a hosted repo whose daily job hasn't fired yet.
-    const needCards = !state.hosted || state.committed === 0;
-    const cards = await fetchCards(needCards, Object.keys(state.extras));
+    // Always pull live card data. Committed snapshots hold a price but not
+    // Cardmarket's rolling averages, and without those the reconstruction has
+    // nothing to work from — which is what left the card reading a flat 0%.
+    const cards = await fetchCards(true, Object.keys(state.extras));
     if (Object.keys(cards).length) {
       const l = latest();
       state.history = mergeSnapshot(state.history, {d: day, btc: btc || (l && l.btc), cards});
