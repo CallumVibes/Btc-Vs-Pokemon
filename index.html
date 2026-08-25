@@ -124,6 +124,47 @@
   .seg button:focus-visible,select:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
   select{background:var(--ink-2);border:1px solid rgba(240,231,210,.2);border-radius:3px;
     color:var(--paper);font-family:var(--data);font-size:12px;padding:9px 10px;max-width:100%}
+  .battle-launch--alt{background:transparent;color:var(--dim);
+    border:1px solid rgba(240,231,210,.24)}
+  .battle-launch--alt:hover{background:var(--ink-2);color:var(--paper);box-shadow:none}
+
+  /* win record */
+  .rec{display:grid;grid-template-columns:1fr auto auto auto;gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:3px;
+    overflow:hidden;margin:14px 0 0;font-family:var(--data);font-size:12px}
+  .rec > *{background:var(--ink-2);padding:10px 11px}
+  .rec .h{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .rec .n{text-align:right}
+  .rec .up{color:var(--win)} .rec .down{color:var(--lose)} .rec .na{color:var(--dim)}
+  .rec .who{text-align:right;font-weight:700}
+  .rec .who--btc{color:var(--sats)} .rec .who--card{color:var(--foil)}
+
+  /* grail board */
+  .board-list{list-style:none;margin:16px 0 0;padding:0;
+    border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .board-list li{display:flex;align-items:center;gap:11px;padding:10px 12px;
+    background:var(--ink-2);border-bottom:1px solid var(--line)}
+  .board-list li:last-child{border-bottom:none}
+  .board-list li.is-current{background:rgba(33,65,143,.55)}
+  .board-list .rank{font-family:var(--data);font-size:11px;color:var(--dim);width:18px;flex:none}
+  .board-list img{width:26px;border-radius:2px;flex:none}
+  .board-list .nm{flex:1;min-width:0;font-size:13px;font-weight:500;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .board-list .nm small{display:block;font-family:var(--data);font-size:9.5px;color:var(--dim)}
+  .board-list .sats{font-family:var(--data);font-size:11.5px;color:var(--sats);text-align:right;flex:none}
+  .board-list .sats small{display:block;color:var(--dim);font-size:10px}
+
+  /* form guide */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:3px;
+    overflow:hidden;margin:16px 0 0}
+  .stat{background:var(--ink-2);padding:14px 14px 15px}
+  .stat__k{font-family:var(--data);font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);margin:0 0 7px}
+  .stat__v{font-family:var(--display);font-size:19px;margin:0;line-height:1.15}
+  .stat__v.dim{color:var(--dim);font-size:13px;font-family:var(--data);font-weight:400}
+  .stat__s{font-family:var(--data);font-size:10.5px;color:var(--dim);margin:6px 0 0;line-height:1.5}
+
   /* ---------- battle ---------- */
   .champ__col{display:flex;flex-direction:column;gap:9px}
   .battle-launch{
@@ -172,6 +213,12 @@
 
   .is-hit{animation:hit .34s steps(2) 3}
   @keyframes hit{0%{opacity:1;transform:translateX(0)}50%{opacity:.25;transform:translateX(-7px)}100%{opacity:1;transform:translateX(0)}}
+  .is-quake{animation:quake .55s cubic-bezier(.36,.07,.19,.97)}
+  @keyframes quake{
+    10%,90%{transform:translate(-2px,1px)} 20%,80%{transform:translate(4px,-2px)}
+    30%,50%,70%{transform:translate(-7px,2px)} 40%,60%{transform:translate(7px,-1px)}
+    100%{transform:none}
+  }
   .is-fainted{animation:faint .7s ease forwards}
   @keyframes faint{to{transform:translateY(58px);opacity:0}}
 
@@ -189,12 +236,6 @@
   .seg--hours[hidden]{display:none}
   .seg--battle button{padding:8px 12px;font-size:10.5px}
 
-  .battle__live{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 0 0;
-    font-family:var(--data);font-size:11px;color:var(--dim);letter-spacing:.04em}
-  .battle__live[hidden]{display:none}
-  .battle__live #livePrice{color:var(--sats);font-weight:700}
-  .battle__live #liveRatio{color:var(--foil)}
-  .battle__tick{margin-left:auto}
 
   .dmg{position:absolute;z-index:5;font-family:var(--display);font-size:19px;
     pointer-events:none;animation:floatUp 1.1s ease-out forwards;text-shadow:2px 2px 0 rgba(8,12,28,.7)}
@@ -286,6 +327,7 @@
   <section class="champ">
     <div class="champ__col">
       <button class="battle-launch" id="battleBtn" title="Play the window out as a battle">⚔ Battle</button>
+      <button class="battle-launch battle-launch--alt" id="shareBtn" title="Save a shareable image">⇪ Share</button>
       <div class="champ__frame" id="frame">
         <img class="champ__art" id="art" alt="" hidden>
         <span class="champ__holo"></span>
@@ -360,24 +402,14 @@
 
       <div class="battle__text"><p id="battleText">&nbsp;</p></div>
 
-      <div class="battle__live" id="liveBar" hidden>
-        <span id="livePrice">—</span>
-        <span id="liveRatio">—</span>
-        <span class="battle__tick" id="liveTick">next tick 10s</span>
-      </div>
-
       <div class="battle__controls">
-        <div class="seg seg--battle" role="group" aria-label="Battle mode">
-          <button data-mode="live" aria-pressed="true">Live</button>
-          <button data-mode="replay" aria-pressed="false">Replay</button>
-        </div>
-        <div class="seg seg--battle seg--hours" id="hoursSeg" role="group" aria-label="Replay length" hidden>
-          <button data-hours="12" aria-pressed="true">12h</button>
-          <button data-hours="24" aria-pressed="false">24h</button>
+        <div class="seg seg--battle" id="rangeSeg" role="group" aria-label="Replay window">
+          <button data-days="7" aria-pressed="true">7d</button>
+          <button data-days="30" aria-pressed="false">1M</button>
+          <button data-days="365" aria-pressed="false">1Y</button>
         </div>
         <button class="find" id="battleSkip">Skip</button>
-        <button class="find" id="battleReplay" hidden>Replay</button>
-        <button class="find" id="battleRematch" hidden>Rematch</button>
+        <button class="find" id="battleReplay" hidden>Again</button>
         <button class="find" id="battleClose">Close</button>
       </div>
       <p class="battle__note" id="battleNote"></p>
@@ -395,6 +427,23 @@
       <span><i class="swatch" style="background:#7FD8E8"></i><b id="legName">Card</b> <b id="legCard" style="color:#F0E7D2;margin-left:4px">—</b></span>
     </div>
     <div id="chartHost"></div>
+  </section>
+
+  <section class="panel" id="recordPanel">
+    <h2 class="panel__title">Win record</h2>
+    <p class="panel__hint" id="recordSummary">Checking every window…</p>
+    <div id="recordTable"></div>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel__title">The grail board</h2>
+    <p class="panel__hint">Everything on the shortlist, priced in sats.</p>
+    <ol class="board-list" id="grailBoard"></ol>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel__title">Form guide</h2>
+    <div class="stats" id="statGrid"></div>
   </section>
 
   <footer class="foot">
@@ -428,7 +477,8 @@
   const num = new Intl.NumberFormat("en-GB");
   const dec = new Intl.NumberFormat("en-GB",{maximumFractionDigits:1});
 
-  const state = { history: [], range: 90, cardId: null, hosted: false, committed: 0, extras: {}, overrides: {} };
+  const state = { history: [], range: 90, cardId: null, hosted: false, committed: 0,
+                  extras: {}, overrides: {}, market: null, btcDaily: [] };
 
   /* ---------- local persistence (used when there's no committed history) ---------- */
   const LOCAL = "btc-vs-pokemon:local";
@@ -514,7 +564,12 @@
       set:c.set ? c.set.name : "", number:c.number || "",
       year:c.set && c.set.releaseDate ? c.set.releaseDate.slice(0,4) : "",
       img:(c.images && (c.images.large || c.images.small)) || "",
-      eur: p ? (p.trendPrice ?? p.averageSellPrice ?? p.avg30 ?? null) : null
+      eur: p ? (p.trendPrice ?? p.averageSellPrice ?? p.avg30 ?? null) : null,
+      // Cardmarket's rolling averages. Not a true history, but enough to
+      // reconstruct roughly where the price has been over the last month.
+      avg1:  p ? (p.avg1  ?? null) : null,
+      avg7:  p ? (p.avg7  ?? null) : null,
+      avg30: p ? (p.avg30 ?? null) : null
     };
   }
 
@@ -590,9 +645,10 @@
       const market = l.cards[id].eur * fx;
       if (market > 0) k = o / market;
     }
-    return windowed()
+    const real = windowed()
       .filter(h => h.cards && h.cards[id] && h.btc)
       .map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id].eur * fx * k}));
+    return bestSeries(id, state.range, real);
   }
 
   /* ---------- render ---------- */
@@ -662,7 +718,9 @@
 
     bEl.className = "side__pct " + pctClass(b); bEl.textContent = pctText(b);
     pEl.className = "side__pct " + pctClass(p); pEl.textContent = pctText(p);
-    el("pkmDetail").textContent = `${s.length} snapshots · raw price`;
+    el("pkmDetail").textContent = isDerived(s)
+      ? "from Cardmarket 7 & 30-day averages"
+      : `${s.length} snapshots · raw price`;
 
     const gap = Math.abs(b - p);
     const leader = b > p ? "Bitcoin" : latest().cards[state.cardId].name;
@@ -685,6 +743,9 @@
       el("legBtc").textContent = "—"; el("legCard").textContent = "—";
       return;
     }
+    el("chartHint").textContent = isDerived(s)
+      ? "Card line reconstructed from Cardmarket's rolling averages until the daily job builds real snapshots."
+      : "Both rebased to 100 at the start of the window.";
 
     const b0 = s[0].btc, c0 = s[0].card;
     const btcIdx = s.map(p => p.btc / b0 * 100);
@@ -736,7 +797,7 @@
       });
   }
 
-  function renderAll() { renderChampion(); renderBoard(); renderChart(); }
+  function renderAll() { renderChampion(); renderBoard(); renderChart(); renderRecord(); renderGrail(); renderStats(); }
 
   /* ---------- interactions ---------- */
   el("frame").addEventListener("pointermove", e => {
@@ -752,61 +813,105 @@
   }));
 
   /* ---------- battle ---------- */
+  const CHART = d => `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=gbp&days=${d}`;
+
   const MOVES = {
-    btc:  {up:["SURGE","BREAKOUT","MOON SHOT"], down:["HODL","DIAMOND HANDS","STACK SATS"]},
-    card: {up:["NOSTALGIA","CHASE RALLY","GRADE BUMP"], down:["SLOW BLEED","BINDER SIT","PRINT RUN"]}
+    btc:  {up:["SURGE","BREAKOUT","MOON SHOT","BULL RUN"], down:["HODL","DIAMOND HANDS","STACK SATS","CONVICTION"]},
+    card: {up:["NOSTALGIA","CHASE RALLY","GRADE BUMP","POP REPORT"], down:["BINDER SIT","SLOW BLEED","PRINT RUN","REPRINT"]}
   };
-  const battle = {running:false, token:0, built:null, mode:"live", hours:12};
+  const battle = {running:false, token:0, built:null, days:7};
 
-  const CHART = h => `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=gbp&days=1`;
+  const pctFine = v => {
+    const a = Math.abs(v);
+    return (v >= 0 ? "+" : "") + v.toFixed(a >= 1 ? 2 : a >= 0.1 ? 3 : 4) + "%";
+  };
+  const hpFine = v => v.toFixed(v >= 1 ? 1 : 2);
+  const rangeLabel = d => d === 7 ? "7 days" : d === 30 ? "1 month" : "1 year";
 
-  // Replays the last 12 or 24 hours of bitcoin against a card that, intraday,
-  // doesn't move at all — Cardmarket revalues once a day. So every swing on
-  // screen is bitcoin's, which is what makes it worth watching.
-  async function buildBattle(hours) {
-    const d = await getJson(CHART(hours));
-    let pts = (d && d.prices) || [];
-    const cutoff = Date.now() - hours * 3600e3;
-    pts = pts.filter(p => p[0] >= cutoff);
+  // The card's price in GBP at a moment in time, from the daily snapshots.
+  // Falls back to the nearest one we have — over short windows that means the
+  // card sits still, which is the truth: Cardmarket revalues once a day.
+  function cardPriceAt(ts, fx) {
+    const day = new Date(ts).toISOString().slice(0, 10);
+    let best = null;
+    for (const h of state.history) {
+      if (!h.cards || !h.cards[state.cardId]) continue;
+      if (h.d <= day || !best) best = h;
+      if (h.d > day && best) break;
+    }
+    return best ? best.cards[state.cardId].eur * fx : null;
+  }
+
+  async function buildBattle(days) {
+    const d = await getJson(CHART(days));
+    const pts = (d && d.prices) || [];
     if (pts.length < 4) return null;
 
-    const TURNS = Math.min(18, Math.max(5, Math.floor(pts.length / 8)));
+    const l = latest();
+    if (!l) return null;
+    const fx = l.btc.gbp / l.btc.eur;
+    const o = overrideFor(state.cardId);
+    const market = l.cards[state.cardId] ? l.cards[state.cardId].eur * fx : null;
+    const k = (o != null && market > 0) ? o / market : 1;
+
+    const TURNS = Math.min(16, Math.max(6, Math.floor(pts.length / 6)));
     const idx = [];
     for (let t = 0; t <= TURNS; t++) idx.push(Math.round(t * (pts.length - 1) / TURNS));
 
-    const turns = [];
+    const fmt = days <= 7
+      ? {weekday:"short", hour:"2-digit", minute:"2-digit"}
+      : days <= 30 ? {day:"numeric", month:"short"} : {month:"short", year:"2-digit"};
+
+    const raw = [];
     for (let t = 1; t <= TURNS; t++) {
       if (idx[t] === idx[t-1]) continue;
-      const a = pts[idx[t-1]][1], b = pts[idx[t]][1];
-      const pct = (b / a - 1) * 100;
-      turns.push({
-        attacker: pct >= 0 ? "btc" : "card",
-        gap: Math.abs(pct), pct,
-        at: new Date(pts[idx[t]][0]).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"})
+      const t0 = pts[idx[t-1]], t1 = pts[idx[t]];
+      const btcPct = (t1[1] / t0[1] - 1) * 100;
+
+      const c0 = cardPriceAt(t0[0], fx), c1 = cardPriceAt(t1[0], fx);
+      const cardPct = (c0 && c1 && c0 > 0) ? (c1 / c0 - 1) * 100 : 0;
+
+      const attacker = btcPct >= cardPct ? "btc" : "card";
+      raw.push({
+        attacker,
+        gap: Math.abs(btcPct - cardPct),
+        pct: attacker === "btc" ? btcPct : cardPct,
+        at: new Date(t1[0]).toLocaleString("en-GB", fmt)
       });
     }
+    const turns = raw.filter(t => t.gap > 0);
     if (!turns.length) return null;
 
+    // Whoever takes the most punishment is the loser, and their damage is
+    // normalised to exactly 100 — so the fight always ends in a knockout, on
+    // the last hit they take. The winner's damage scales by the same factor,
+    // so the margin of victory stays honest.
     let toCard = 0, toBtc = 0;
     for (const t of turns) t.attacker === "btc" ? (toCard += t.gap) : (toBtc += t.gap);
-    const worst = Math.max(toCard, toBtc);
-    let scale = 1;
-    if (worst > 96) scale = 96 / worst;
-    else if (worst > 0 && worst < 40) scale = 40 / worst;
+    const loser = toCard >= toBtc ? "card" : "btc";
+    const loserTotal = Math.max(toCard, toBtc);
+    const scale = loserTotal > 0 ? 100 / loserTotal : 0;
     for (const t of turns) t.dmg = t.gap * scale;
 
-    const l = latest();
-    const foe = l && l.cards[state.cardId];
+    const avg = turns.reduce((a, t) => a + t.gap, 0) / turns.length;
+    const biggest = turns.reduce((a, t) => (t.gap > a.gap ? t : a), turns[0]);
+    for (const t of turns) {
+      t.superEffective = t.gap > avg * 2;
+      t.critical = t === biggest && turns.length > 3;
+    }
+
+    const foe = l.cards[state.cardId];
     const first = pts[0][1], last = pts[pts.length-1][1];
+    const c0 = cardPriceAt(pts[0][0], fx), c1 = cardPriceAt(pts[pts.length-1][0], fx);
 
     return {
-      turns, scaled: Math.abs(scale - 1) > 0.01,
+      turns, loser, days,
       foeName: foe ? foe.name : "CARD",
       foeImg: foe ? foe.img : "",
-      hours,
-      from: new Date(pts[0][0]).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"}),
+      from: new Date(pts[0][0]).toLocaleDateString("en-GB", {day:"numeric", month:"short"}),
       btcEnd: (last / first - 1) * 100,
-      cardEnd: 0
+      cardEnd: (c0 && c1 && c0 > 0) ? (c1 / c0 - 1) * 100 : 0,
+      cardMoved: !!(c0 && c1 && Math.abs(c1 - c0) > 1e-9)
     };
   }
 
@@ -816,10 +921,20 @@
     const v = Math.max(0, hp);
     bar.style.width = v + "%";
     bar.style.background = v > 50 ? "#5BD98A" : v > 20 ? "#E8C25A" : "#E8657C";
-    label.textContent = (v >= 100 || v === 0 ? Math.round(v) : v.toFixed(1)) + "/100";
+    bar.classList.toggle("is-low", v <= 20 && v > 0);
+    label.textContent = (v >= 100 || v <= 0 ? Math.round(v) : v.toFixed(1)) + "/100";
   }
 
-  async function typeLine(text, token, speed = 16) {
+  function floatDamage(side, text) {
+    const s = document.createElement("span");
+    s.className = "dmg " + (side === "card" ? "dmg--foe" : "dmg--hero");
+    s.textContent = text;
+    s.style.color = "#E8657C";
+    el("battleStage").appendChild(s);
+    setTimeout(() => s.remove(), 1150);
+  }
+
+  async function typeLine(text, token, speed = 14) {
     const p = el("battleText");
     p.classList.remove("done");
     p.textContent = "";
@@ -836,15 +951,19 @@
     if (b.foeImg) { el("foeArt").src = b.foeImg; el("foeArt").alt = b.foeName; }
     el("foeSprite").className = "sprite sprite--foe";
     el("heroSprite").className = "sprite sprite--hero";
-    el("foeBar").style.transition = "none";
-    el("heroBar").style.transition = "none";
+    el("battleStage").classList.remove("is-quake");
+    for (const id of ["foeBar", "heroBar"]) {
+      const bar = el(id);
+      bar.style.transition = "none";
+      bar.classList.remove("is-low");
+    }
     setHp("btc", 100); setHp("card", 100);
     void el("foeBar").offsetWidth;
     el("foeBar").style.transition = "";
     el("heroBar").style.transition = "";
-    el("battleNote").textContent = `Last ${b.hours}h from ${b.from} · ` + (b.scaled
-      ? "HP scaled to fit the window — the order and size of the swings are real"
-      : "one HP per percentage point");
+    el("battleNote").textContent =
+      `Last ${rangeLabel(b.days)} from ${b.from} · ` +
+      (b.cardMoved ? "both sides moving" : "the card hasn't moved in this window — every swing is bitcoin's");
   }
 
   async function runBattle() {
@@ -858,47 +977,52 @@
     resetStage(b);
     let hpBtc = 100, hpCard = 100;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return finishBattle(b, token, true);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      return finishBattle(b, token, true);
 
-    // The whole fight fits a fixed budget: more turns means a faster fight,
-    // not a longer one.
-    const BUDGET = 12000, INTRO = 2000, OUTRO = 2600;
-    const perTurn = Math.min(1400, Math.max(520, (BUDGET - INTRO - OUTRO) / b.turns.length));
-    const typeSpeed = perTurn < 700 ? 8 : perTurn < 1000 ? 12 : 16;
-    const hitTime = Math.min(700, perTurn * 0.55);
+    const BUDGET = 14000, INTRO = 2000, OUTRO = 3000;
+    const perTurn = Math.min(1300, Math.max(480, (BUDGET - INTRO - OUTRO) / b.turns.length));
+    const typeSpeed = perTurn < 650 ? 7 : perTurn < 950 ? 11 : 14;
+    const hitTime = Math.min(600, perTurn * 0.5);
     el("foeBar").style.transitionDuration = hitTime + "ms";
     el("heroBar").style.transitionDuration = hitTime + "ms";
 
     await typeLine(`A wild ${b.foeName.toUpperCase()} appeared!`, token, typeSpeed);
     if (battle.token !== token) return;
-    await sleep(INTRO * 0.35);
-
+    await sleep(INTRO * 0.4);
     await typeLine("BITCOIN, go!", token, typeSpeed);
     if (battle.token !== token) return;
     await sleep(INTRO * 0.25);
 
-    for (const t of b.turns) {
+    for (let i = 0; i < b.turns.length; i++) {
+      const t = b.turns[i];
       if (battle.token !== token) return;
 
       const dir = t.pct >= 0 ? "up" : "down";
       const pool = MOVES[t.attacker][dir];
-      const move = pool[b.turns.indexOf(t) % pool.length];
+      const move = pool[i % pool.length];
       const who = t.attacker === "btc" ? "BITCOIN" : b.foeName.toUpperCase();
 
       await typeLine(`${t.at} — ${who} used ${move}! ${pctFine(t.pct)}`, token, typeSpeed);
       if (battle.token !== token) return;
-      await sleep(perTurn * 0.18);
+      await sleep(perTurn * 0.16);
 
-      const targetEl = t.attacker === "btc" ? el("foeSprite") : el("heroSprite");
-      targetEl.classList.add("is-hit");
-      setTimeout(() => targetEl.classList.remove("is-hit"), hitTime + 200);
+      const target = t.attacker === "btc" ? el("foeSprite") : el("heroSprite");
+      target.classList.add("is-hit");
+      setTimeout(() => target.classList.remove("is-hit"), hitTime + 200);
 
       if (t.attacker === "btc") { hpCard = Math.max(0, hpCard - t.dmg); setHp("card", hpCard); }
       else                      { hpBtc  = Math.max(0, hpBtc  - t.dmg); setHp("btc",  hpBtc);  }
+      floatDamage(t.attacker === "btc" ? "card" : "btc", "−" + hpFine(t.dmg));
 
-      await sleep(perTurn * 0.55);
+      await sleep(perTurn * 0.42);
       if (battle.token !== token) return;
+
+      if (t.critical || t.superEffective) {
+        await typeLine(t.critical ? "A critical hit!" : "It's super effective!", token, typeSpeed);
+        if (battle.token !== token) return;
+        await sleep(perTurn * 0.3);
+      }
 
       if (hpCard <= 0 || hpBtc <= 0) break;
     }
@@ -907,25 +1031,25 @@
   }
 
   async function finishBattle(b, token, instant, hpBtc, hpCard, typeSpeed = 12) {
-    const btcWon = b.btcEnd >= b.cardEnd;
-    if (instant) {
-      setHp("btc", btcWon ? 100 : 8);
-      setHp("card", btcWon ? 8 : 100);
-    } else {
-      const fainted = hpBtc <= 0 || hpCard <= 0;
-      if (fainted) {
-        const loserEl = hpCard <= 0 ? el("foeSprite") : el("heroSprite");
-        loserEl.classList.add("is-fainted");
-        await typeLine(`${hpCard <= 0 ? b.foeName.toUpperCase() : "BITCOIN"} fainted!`, token, typeSpeed);
-        if (battle.token !== token) return;
-        await sleep(800);
-      }
-    }
+    const btcWon = b.loser === "card";
+    if (instant) { setHp("btc", btcWon ? 100 : 0); setHp("card", btcWon ? 0 : 100); }
+    else { setHp("btc", btcWon ? Math.max(hpBtc, 0.1) : 0); setHp("card", btcWon ? 0 : Math.max(hpCard, 0.1)); }
 
-    const winner = btcWon ? "BITCOIN" : b.foeName.toUpperCase();
+    const name = b.foeName.toUpperCase();
+    const loserEl = btcWon ? el("foeSprite") : el("heroSprite");
+    el("battleStage").classList.add("is-quake");
+    setTimeout(() => el("battleStage").classList.remove("is-quake"), 600);
+    loserEl.classList.add("is-fainted");
+
+    await typeLine(`${btcWon ? name : "BITCOIN"} fainted!`, token, typeSpeed);
+    if (battle.token !== token) return;
+    await sleep(900);
+
     const gap = Math.abs(b.btcEnd - b.cardEnd);
-    await typeLine(`${winner} wins by ${dec.format(gap)} points! ` +
-      `BITCOIN ${pctFine(b.btcEnd)} over ${b.hours}h — ${b.foeName.toUpperCase()} didn't move.`, token, typeSpeed);
+    await typeLine(
+      `${btcWon ? "BITCOIN" : name} wins by ${dec.format(gap)} points! ` +
+      `Over ${rangeLabel(b.days)}: BITCOIN ${pctFine(b.btcEnd)}, ${name} ` +
+      (b.cardMoved ? pctFine(b.cardEnd) : "flat"), token, typeSpeed);
 
     if (battle.token !== token) return;
     battle.running = false;
@@ -933,38 +1057,31 @@
     el("battleReplay").hidden = false;
   }
 
-  async function openBattleReplay() {
+  async function openBattle() {
+    el("battle").hidden = false;
     const token = ++battle.token;
-    el("hoursSeg").hidden = false;
     el("battleSkip").hidden = true;
     el("battleReplay").hidden = true;
-    el("battleRematch").hidden = true;
     el("battleNote").textContent = "";
-    el("battleText").textContent = `Winding back the last ${battle.hours} hours…`;
+    el("battleText").textContent = `Winding back ${rangeLabel(battle.days)}…`;
     el("battleText").classList.add("done");
 
     let b = null;
-    try { b = await buildBattle(battle.hours); } catch (e) {}
+    try { b = await buildBattle(battle.days); } catch (e) {}
     if (battle.token !== token) return;
 
     if (!b) {
       battle.built = null;
-      el("battleText").textContent = "Couldn't fetch the intraday prices — the free feed may be throttling. Try Live, or give it a minute.";
+      el("battleText").textContent = "Couldn't build a fight from that window — the price feed may be throttling. Try again, or pick a different range.";
       return;
     }
     battle.built = b;
     runBattle();
   }
 
-  function openBattle() {
-    el("battle").hidden = false;
-    setMode(battle.mode || "replay");
-  }
-
   function closeBattle() {
     battle.token++;
     battle.running = false;
-    stopLive();
     el("battle").hidden = true;
   }
 
@@ -972,232 +1089,417 @@
   el("battleClose").addEventListener("click", closeBattle);
   el("battleReplay").addEventListener("click", runBattle);
   el("battleSkip").addEventListener("click", () => {
-    const b = battle.built;
-    if (!b) return;
-    battle.token++;
-    const token = battle.token;
-    resetStage(b);
-    finishBattle(b, token, true);
+    if (!battle.built) return;
+    const token = ++battle.token;
+    resetStage(battle.built);
+    finishBattle(battle.built, token, true);
   });
+  document.querySelectorAll("[data-days]").forEach(b =>
+    b.addEventListener("click", () => {
+      battle.days = parseInt(b.dataset.days, 10);
+      document.querySelectorAll("[data-days]").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      openBattle();
+    }));
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !el("battle").hidden) closeBattle();
   });
 
-  /* ---------- live bitcoin polling ---------- */
-  const POLL_MS = 5 * 60 * 1000;
-  let lastPoll = 0;
+  /* ---------- reconstructed card history ---------- */
+  // Cardmarket gives rolling averages, not a history. But a 7-day mean sits
+  // roughly where the price was 3.5 days ago, and a 30-day mean around 15 days
+  // ago. That's enough to place three past points and stop the card reading a
+  // flat 0% before the daily job has built up real snapshots.
+  const AVG_ANCHORS = [
+    {key:"avg30", daysAgo:15},
+    {key:"avg7",  daysAgo:3.5},
+    {key:"avg1",  daysAgo:1}
+  ];
 
-  async function pollBtc() {
-    const day = new Date().toISOString().slice(0, 10);
-    let btc = null;
-    try {
-      const d = await getJson(CG);
-      btc = d && d.bitcoin;
-    } catch (e) { return; }
-    if (!btc || !btc.gbp) return;
-
-    lastPoll = Date.now();
+  function btcAt(daysAgo) {
+    const pts = state.btcDaily;
     const l = latest();
-    if (l && l.d === day) l.btc = btc;
-    else state.history = mergeSnapshot(state.history, {d: day, btc, cards: {}});
-
-    writeLocal();
-    renderChampion();
-    renderBoard();
-    renderChart();
-  }
-
-  setInterval(pollBtc, POLL_MS);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && Date.now() - lastPoll > POLL_MS) pollBtc();
-  });
-
-  /* ---------- live battle ---------- */
-  // Bitcoin moves constantly but card prices only revalue daily, so intraday the
-  // card stands still and bitcoin's swing is the whole fight. SENS turns a 1%
-  // move into 20 HP, so a 5% run is a knockout — and a 0.01% twitch still lands.
-  const SENS = 20, TICK_MS = 4000;
-  const live = {on:false, timer:null, countdown:null, hpBtc:100, hpCard:100,
-                lastRatio:null, nextAt:0, backoff:TICK_MS, over:false};
-
-  // Small moves need more decimals than the rest of the page uses.
-  const pctFine = v => {
-    const a = Math.abs(v);
-    return (v >= 0 ? "+" : "") + v.toFixed(a >= 1 ? 2 : a >= 0.1 ? 3 : 4) + "%";
-  };
-  const hpFine = v => v.toFixed(v >= 1 ? 1 : 2);
-
-  function currentRatio() {
-    const l = latest();
-    if (!l) return null;
-    const cardGbp = priceOf(state.cardId, l);
-    return cardGbp > 0 ? l.btc.gbp / cardGbp : null;
-  }
-
-  // Coinbase spot updates in real time. CoinGecko's free tier caches for about a
-  // minute, which is why ticks used to return an identical price over and over.
-  async function fetchSpotGbp() {
-    const d = await getJson(SPOT, 1);
-    const v = d && d.data && parseFloat(d.data.amount);
-    return v > 0 ? v : null;
-  }
-
-  function floatDamage(side, text, colour) {
-    const s = document.createElement("span");
-    s.className = "dmg " + (side === "card" ? "dmg--foe" : "dmg--hero");
-    s.textContent = text;
-    s.style.color = colour;
-    el("battleStage").appendChild(s);
-    setTimeout(() => s.remove(), 1150);
-  }
-
-  function setLowFlash() {
-    el("foeBar").classList.toggle("is-low", live.hpCard <= 20 && live.hpCard > 0);
-    el("heroBar").classList.toggle("is-low", live.hpBtc <= 20 && live.hpBtc > 0);
-  }
-
-  async function liveTick() {
-    if (!live.on || live.over) return;
-
-    let gbp = null;
-    try {
-      gbp = await fetchSpotGbp();
-      if (!gbp) {                                   // fall back to CoinGecko
-        const d = await getJson(CG, 1);
-        gbp = d && d.bitcoin && d.bitcoin.gbp;
-      }
-    } catch (e) {
-      live.backoff = Math.min(30000, live.backoff * 2);
-      el("liveTick").textContent = "feed throttled — backing off";
-      scheduleTick();
-      return;
+    if (!pts.length) return l ? l.btc.gbp : null;
+    const target = Date.now() - daysAgo * 86400000;
+    let best = pts[0], gap = Infinity;
+    for (const p of pts) {
+      const g = Math.abs(p[0] - target);
+      if (g < gap) { gap = g; best = p; }
     }
-    if (!gbp) { scheduleTick(); return; }
-    live.backoff = TICK_MS;
+    return best[1];
+  }
 
-    const day = new Date().toISOString().slice(0, 10);
+  function derivedSeries(id, days) {
     const l = latest();
-    if (l && l.d === day) l.btc = {...l.btc, gbp};   // keep eur/usd for FX
-    lastPoll = Date.now();
-    renderChampion(); renderBoard();
+    const c = l && l.cards[id];
+    if (!c) return [];
+    const fx = l.btc.gbp / l.btc.eur;
+    const o = overrideFor(id);
+    const k = (o != null && c.eur > 0) ? o / (c.eur * fx) : 1;
 
-    const ratio = currentRatio();
-    el("livePrice").textContent = gbpFine.format(gbp);
-    el("liveRatio").textContent = ratio ? dec.format(ratio) + " cards per coin" : "—";
-
-    if (ratio && live.lastRatio) {
-      const movePct = (ratio / live.lastRatio - 1) * 100;
-      const dmg = Math.abs(movePct) * SENS;
-      const foe = latest().cards[state.cardId];
-      const foeName = (foe ? foe.name : "CARD").toUpperCase();
-
-      if (movePct === 0) {
-        await typeLine("Both sides circling… price hasn't moved.", ++battle.token, 10);
-      } else if (movePct > 0) {
-        live.hpCard = Math.max(0, live.hpCard - dmg);
-        setHp("card", live.hpCard);
-        el("foeSprite").classList.add("is-hit");
-        setTimeout(() => el("foeSprite").classList.remove("is-hit"), 700);
-        floatDamage("card", "−" + hpFine(dmg), "#E8657C");
-        await typeLine(`BITCOIN used SURGE! ${pctFine(movePct)} — ${hpFine(dmg)} HP off ${foeName}.`, ++battle.token, 9);
-      } else {
-        live.hpBtc = Math.max(0, live.hpBtc - dmg);
-        setHp("btc", live.hpBtc);
-        el("heroSprite").classList.add("is-hit");
-        setTimeout(() => el("heroSprite").classList.remove("is-hit"), 700);
-        floatDamage("btc", "−" + hpFine(dmg), "#E8657C");
-        await typeLine(`${foeName} held firm! ${pctFine(movePct)} — ${hpFine(dmg)} HP off BITCOIN.`, ++battle.token, 9);
-      }
-      setLowFlash();
+    const out = [];
+    for (const a of AVG_ANCHORS) {
+      const v = c[a.key];
+      if (v == null || v <= 0) continue;
+      if (days && a.daysAgo > days) continue;
+      const btc = btcAt(a.daysAgo);
+      if (!btc) continue;
+      const d = new Date(Date.now() - a.daysAgo * 86400000).toISOString().slice(0, 10);
+      out.push({d, btc, card: v * fx * k, derived: true});
     }
-    live.lastRatio = ratio;
-
-    if (live.hpCard <= 0 || live.hpBtc <= 0) return endLive();
-    scheduleTick();
+    if (c.eur > 0) {
+      out.push({d: new Date().toISOString().slice(0, 10),
+                btc: l.btc.gbp, card: c.eur * fx * k, derived: true});
+    }
+    return out.length >= 2 ? out : [];
   }
 
-  function scheduleTick() {
-    clearTimeout(live.timer);
-    live.nextAt = Date.now() + live.backoff;
-    live.timer = setTimeout(liveTick, live.backoff);
+  // Real snapshots always win. The reconstruction only fills in where the daily
+  // job hasn't accumulated enough yet.
+  function bestSeries(id, days, real) {
+    if (real.length >= 2) return real;
+    const d = derivedSeries(id, days);
+    return d.length >= 2 ? d : real;
+  }
+  const isDerived = s => s.length > 0 && !!s[0].derived;
+  const MARKETS = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=gbp&ids=bitcoin";
+
+  // Series for an arbitrary window, independent of the chart's own range.
+  function seriesDays(id, days) {
+    const l = latest();
+    if (!l) return [];
+    const fx = l.btc.gbp / l.btc.eur;
+    const o = overrideFor(id);
+    const mkt = l.cards[id] ? l.cards[id].eur * fx : null;
+    const k = (o != null && mkt > 0) ? o / mkt : 1;
+
+    let rows = state.history.filter(h => h.cards && h.cards[id] && h.btc);
+    if (days) {
+      const cut = new Date();
+      cut.setDate(cut.getDate() - days);
+      const key = cut.toISOString().slice(0, 10);
+      rows = rows.filter(h => h.d >= key);
+    }
+    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id].eur * fx * k}));
+    return bestSeries(id, days, real);
   }
 
-  async function endLive() {
-    live.over = true;
-    clearTimeout(live.timer);
-    const btcWon = live.hpCard <= 0;
-    const foe = latest().cards[state.cardId];
-    const name = (foe ? foe.name : "CARD").toUpperCase();
-    const loserEl = btcWon ? el("foeSprite") : el("heroSprite");
-    loserEl.classList.add("is-fainted");
-    el("foeBar").classList.remove("is-low");
-    el("heroBar").classList.remove("is-low");
-    await typeLine(`${btcWon ? name : "BITCOIN"} fainted! ${btcWon ? "BITCOIN" : name} wins.`, ++battle.token, 12);
-    el("liveTick").textContent = "fight over";
-    el("battleRematch").hidden = false;
-  }
+  const WINDOWS = [
+    {label:"7 days",  days:7},
+    {label:"1 month", days:30},
+    {label:"1 year",  days:365},
+    {label:"All time", days:0}
+  ];
 
-  function startLive() {
-    battle.token++;
-    live.on = true; live.over = false;
-    live.hpBtc = 100; live.hpCard = 100;
-    live.backoff = TICK_MS;
-    live.lastRatio = currentRatio();
+  function renderRecord() {
+    const host = el("recordTable");
+    if (!host) return;
+    const rows = [];
+    let btcWins = 0, decided = 0;
+
+    for (const w of WINDOWS) {
+      const s = seriesDays(state.cardId, w.days);
+      if (s.length < 2) { rows.push({...w, na:true}); continue; }
+      const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
+      const c = (s[s.length-1].card / s[0].card - 1) * 100;
+      const winner = b >= c ? "btc" : "card";
+      if (winner === "btc") btcWins++;
+      decided++;
+      rows.push({...w, b, c, winner, days_: s.length});
+    }
 
     const foe = latest() && latest().cards[state.cardId];
-    el("foeName").textContent = foe ? foe.name.toUpperCase() : "CARD";
-    if (foe && foe.img) { el("foeArt").src = foe.img; el("foeArt").alt = foe.name; }
-    el("foeSprite").className = "sprite sprite--foe";
-    el("heroSprite").className = "sprite sprite--hero";
-    setHp("btc", 100); setHp("card", 100);
-    el("foeBar").style.transitionDuration = "550ms";
-    el("heroBar").style.transitionDuration = "550ms";
-    setLowFlash();
+    const foeName = foe ? foe.name : "Card";
 
-    el("liveBar").hidden = false;
-    el("battleSkip").hidden = true;
-    el("battleReplay").hidden = true;
-    el("battleRematch").hidden = true;
-    el("battleNote").textContent = `Live spot price · a 1% move is ${SENS} HP · the card only revalues daily, so bitcoin swings and it takes it`;
-    typeLine("Live battle! Every tick is a real price move.", battle.token, 12);
+    host.innerHTML = `<div class="rec">
+      <span class="h">Window</span><span class="h n">Bitcoin</span>
+      <span class="h n">${foeName}</span><span class="h n">Leader</span>
+      ${rows.map(r => r.na
+        ? `<span>${r.label}</span><span class="n na">—</span><span class="n na">—</span><span class="who na">no data</span>`
+        : `<span>${r.label}</span>
+           <span class="n ${r.b >= 0 ? "up" : "down"}">${pctText(r.b)}</span>
+           <span class="n ${r.c >= 0 ? "up" : "down"}">${pctText(r.c)}</span>
+           <span class="who who--${r.winner}">${r.winner === "btc" ? "BTC" : "CARD"}</span>`
+      ).join("")}
+    </div>`;
 
-    clearInterval(live.countdown);
-    live.countdown = setInterval(() => {
-      if (!live.on || live.over) return;
-      const s = Math.max(0, Math.ceil((live.nextAt - Date.now()) / 1000));
-      el("liveTick").textContent = "next tick " + s + "s";
-    }, 250);
-
-    live.backoff = 1200;
-    scheduleTick();
-    live.backoff = TICK_MS;
+    el("recordSummary").textContent = decided
+      ? `Bitcoin leads ${btcWins} of ${decided} window${decided > 1 ? "s" : ""}. ` +
+        (decided < WINDOWS.length ? "The rest fill in as the daily job runs." : "Pick your favourite.")
+      : "Needs at least two daily snapshots before any window can be called.";
   }
 
-  function stopLive() {
-    live.on = false;
-    clearTimeout(live.timer);
-    clearInterval(live.countdown);
-    el("liveBar").hidden = true;
+  function renderGrail() {
+    const host = el("grailBoard");
+    const l = latest();
+    if (!host || !l) return;
+
+    const rows = Object.entries(l.cards)
+      .map(([id, c]) => ({id, c, gbp: priceOf(id, l)}))
+      .filter(r => r.gbp != null)
+      .sort((a, b) => b.gbp - a.gbp);
+
+    host.innerHTML = rows.map((r, i) => `
+      <li class="${r.id === state.cardId ? "is-current" : ""}">
+        <span class="rank">${i + 1}</span>
+        ${r.c.img ? `<img src="${r.c.img}" alt="" loading="lazy">` : ""}
+        <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}</small></span>
+        <span class="sats">${num.format(Math.round(r.gbp / l.btc.gbp * 1e8))}
+          <small>${gbpFmt.format(r.gbp)}</small></span>
+      </li>`).join("");
   }
 
-  function setMode(mode) {
-    document.querySelectorAll("[data-mode]").forEach(x =>
-      x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
-    battle.mode = mode;
-    if (mode === "live") { battle.token++; el("hoursSeg").hidden = true; startLive(); }
-    else { stopLive(); el("battleRematch").hidden = true; openBattleReplay(); }
+  // Average absolute day-to-day move, as a plain volatility read.
+  function avgMove(vals) {
+    if (vals.length < 3) return null;
+    let sum = 0, n = 0;
+    for (let i = 1; i < vals.length; i++) {
+      if (vals[i-1] > 0) { sum += Math.abs(vals[i] / vals[i-1] - 1) * 100; n++; }
+    }
+    return n ? sum / n : null;
   }
 
-  document.querySelectorAll("[data-mode]").forEach(b =>
-    b.addEventListener("click", () => setMode(b.dataset.mode)));
-  document.querySelectorAll("[data-hours]").forEach(b =>
-    b.addEventListener("click", () => {
-      battle.hours = parseInt(b.dataset.hours, 10);
-      document.querySelectorAll("[data-hours]").forEach(x =>
-        x.setAttribute("aria-pressed", String(x === b)));
-      openBattleReplay();
-    }));
-  el("battleRematch").addEventListener("click", startLive);
+  // How many consecutive days one side has beaten the other.
+  function streak() {
+    const s = seriesDays(state.cardId, 0);
+    if (s.length < 3) return null;
+    let side = null, count = 0;
+    for (let i = s.length - 1; i > 0; i--) {
+      const b = s[i].btc / s[i-1].btc - 1;
+      const c = s[i].card / s[i-1].card - 1;
+      const w = b >= c ? "btc" : "card";
+      if (side === null) { side = w; count = 1; }
+      else if (w === side) count++;
+      else break;
+    }
+    return {side, count};
+  }
+
+  function renderStats() {
+    const host = el("statGrid");
+    const l = latest();
+    if (!host || !l) return;
+
+    const foe = l.cards[state.cardId];
+    const foeName = foe ? foe.name : "the card";
+    const cards = [];
+
+    // 4a. bitcoin below its all-time high
+    if (state.market && state.market.ath) {
+      const off = state.market.ath_change_percentage;
+      cards.push({
+        k: "Bitcoin vs its peak",
+        v: pctText(off),
+        vClass: off >= 0 ? "" : "",
+        s: `All-time high ${gbpFmt.format(state.market.ath)}. Today ${gbpFmt.format(l.btc.gbp)}.`
+      });
+    }
+
+    // 4b. the card versus its own peak, once there's history
+    const cs = seriesDays(state.cardId, 0);
+    if (cs.length >= 2) {
+      const peak = Math.max(...cs.map(p => p.card));
+      const nowP = cs[cs.length-1].card;
+      cards.push({
+        k: `${foeName} vs its peak`,
+        v: pctText((nowP / peak - 1) * 100),
+        s: `Highest since tracking began: ${gbpFine.format(peak)}.`
+      });
+    } else {
+      cards.push({k: `${foeName} vs its peak`, v: "needs history", dim: true,
+                  s: "A few daily snapshots and this fills in."});
+    }
+
+    // 5. volatility, side by side
+    const btcVol = avgMove(state.btcDaily.map(p => p[1]));
+    const cardVol = avgMove(cs.map(p => p.card));
+    if (btcVol != null) {
+      cards.push({
+        k: "Bitcoin's average day",
+        v: "±" + dec.format(btcVol) + "%",
+        s: cardVol != null
+          ? `${foeName} averages ±${dec.format(cardVol)}% a day — ` +
+            `${dec.format(btcVol / Math.max(cardVol, 0.001))}× calmer.`
+          : "Over the last 30 days. The card's own figure needs more snapshots."
+      });
+    }
+
+    // 6. current streak
+    const st = streak();
+    cards.push(st
+      ? {k: "Current streak",
+         v: `${st.count} day${st.count > 1 ? "s" : ""}`,
+         s: `${st.side === "btc" ? "Bitcoin" : foeName} has come out ahead ${st.count} day${st.count > 1 ? "s" : ""} running.`}
+      : {k: "Current streak", v: "needs history", dim: true,
+         s: "Three days of snapshots and the run count starts."});
+
+    // a bonus that's free from the same call
+    if (state.market && state.market.high_24h) {
+      cards.push({
+        k: "Bitcoin's day",
+        v: pctText(state.market.price_change_percentage_24h || 0),
+        s: `Range ${gbpFmt.format(state.market.low_24h)} – ${gbpFmt.format(state.market.high_24h)}.`
+      });
+    }
+
+    host.innerHTML = cards.map(c => `
+      <div class="stat">
+        <p class="stat__k">${c.k}</p>
+        <p class="stat__v ${c.dim ? "dim" : (String(c.v).startsWith("-") ? "" : "")}">${c.v}</p>
+        <p class="stat__s">${c.s}</p>
+      </div>`).join("");
+  }
+
+  async function loadExtras() {
+    try {
+      const m = await getJson(MARKETS, 1);
+      if (Array.isArray(m) && m[0]) state.market = m[0];
+    } catch (e) {}
+    try {
+      const d = await getJson(CHART(30), 1);
+      state.btcDaily = (d && d.prices) || [];
+    } catch (e) {}
+    // The reconstructed card line needs these closes to place its past points,
+    // so everything gets another pass once they arrive.
+    renderAll();
+  }
+
+  /* ---------- share image ---------- */
+  function loadImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  async function buildShareImage() {
+    const l = latest();
+    const foe = l && l.cards[state.cardId];
+    if (!l || !foe) return null;
+
+    const W = 1080, H = 1350;
+    const cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    const c = cv.getContext("2d");
+
+    const g = c.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#16265A"); g.addColorStop(0.55, "#0B1436"); g.addColorStop(1, "#080C1C");
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+
+    c.fillStyle = "#8A93B8";
+    c.font = "600 26px 'JetBrains Mono', monospace";
+    c.fillText("BITCOIN  VS  POKÉMON", 70, 96);
+
+    // card art, or a drawn stand-in if the CDN blocks canvas use
+    const art = foe.img ? await loadImage(foe.img) : null;
+    const cardW = 330, cardH = Math.round(cardW * 342 / 245), cardX = 70, cardY = 150;
+    if (art) {
+      c.save();
+      roundRect(c, cardX, cardY, cardW, cardH, 18); c.clip();
+      c.drawImage(art, cardX, cardY, cardW, cardH);
+      c.restore();
+    } else {
+      c.fillStyle = "#FFCB05"; roundRect(c, cardX, cardY, cardW, cardH, 18); c.fill();
+      c.fillStyle = "#21418F";
+      roundRect(c, cardX + 26, cardY + 26, cardW - 52, cardH - 52, 10); c.fill();
+    }
+    c.strokeStyle = "rgba(240,231,210,.35)"; c.lineWidth = 3;
+    roundRect(c, cardX, cardY, cardW, cardH, 18); c.stroke();
+
+    const rx = cardX + cardW + 56;
+    c.fillStyle = "#8A93B8"; c.font = "500 24px 'JetBrains Mono', monospace";
+    c.fillText("ONE BITCOIN BUYS", rx, cardY + 54);
+
+    const gbp = priceOf(state.cardId, l);
+    const count = gbp > 0 ? l.btc.gbp / gbp : 0;
+    const countTxt = count >= 100 ? num.format(Math.round(count))
+                   : count >= 1 ? dec.format(count) : count.toFixed(2);
+    c.fillStyle = "#E8C25A"; c.font = "108px Bungee, sans-serif";
+    c.fillText(countTxt, rx, cardY + 176);
+
+    c.fillStyle = "#F0E7D2"; c.font = "500 34px 'Space Grotesk', sans-serif";
+    const name = foe.name.length > 16 ? foe.name.slice(0, 15) + "…" : foe.name;
+    c.fillText(name, rx, cardY + 232);
+    c.fillStyle = "#8A93B8"; c.font = "400 24px 'JetBrains Mono', monospace";
+    c.fillText(foe.set || "", rx, cardY + 272);
+
+    c.fillStyle = "#F7931A";
+    roundRect(c, rx, cardY + 306, 400, 62, 6); c.fill();
+    c.fillStyle = "#1A0F00"; c.font = "700 27px 'JetBrains Mono', monospace";
+    c.fillText(num.format(Math.round(gbp / l.btc.gbp * 1e8)) + " sats each", rx + 22, cardY + 347);
+
+    // the scoreboard for the current chart window
+    const s = series(state.cardId);
+    const y0 = cardY + cardH + 110;
+    c.fillStyle = "rgba(240,231,210,.14)"; c.fillRect(70, y0 - 56, W - 140, 2);
+
+    if (s.length >= 2) {
+      const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
+      const cp = (s[s.length-1].card / s[0].card - 1) * 100;
+      const rows = [["BITCOIN", b, "#F7931A"], [foe.name.toUpperCase(), cp, "#7FD8E8"]];
+      rows.forEach(([label, v, col], i) => {
+        const y = y0 + i * 118;
+        c.fillStyle = col; c.beginPath(); c.arc(84, y - 12, 11, 0, 7); c.fill();
+        c.fillStyle = "#8A93B8"; c.font = "500 26px 'JetBrains Mono', monospace";
+        c.fillText(String(label).slice(0, 22), 112, y - 3);
+        c.fillStyle = v >= 0 ? "#5BD98A" : "#E8657C";
+        c.font = "64px Bungee, sans-serif";
+        c.fillText(pctText(v), 112, y + 66);
+      });
+      c.fillStyle = "#8A93B8"; c.font = "400 23px 'JetBrains Mono', monospace";
+      c.fillText(`since ${pretty(s[0].d)}`, 112, y0 + 250);
+    } else {
+      c.fillStyle = "#8A93B8"; c.font = "400 27px 'JetBrains Mono', monospace";
+      c.fillText("Tracking just started — no window to compare yet.", 84, y0 + 20);
+    }
+
+    c.fillStyle = "#8A93B8"; c.font = "400 22px 'JetBrains Mono', monospace";
+    c.fillText(new Date().toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"}), 70, H - 62);
+    c.textAlign = "right";
+    c.fillText(location.host || "bitcoin vs pokémon", W - 70, H - 62);
+    c.textAlign = "left";
+
+    return new Promise(res => cv.toBlob(res, "image/png"));
+  }
+
+  el("shareBtn").addEventListener("click", async () => {
+    const btn = el("shareBtn");
+    const label = btn.textContent;
+    btn.textContent = "…";
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const blob = await buildShareImage();
+      if (!blob) throw new Error("nothing to render");
+      const file = new File([blob], "btc-vs-pokemon.png", {type:"image/png"});
+
+      if (navigator.canShare && navigator.canShare({files:[file]})) {
+        await navigator.share({files:[file], title:"Bitcoin vs Pokémon"});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "btc-vs-pokemon.png";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+      btn.textContent = label;
+    } catch (e) {
+      btn.textContent = "failed";
+      setTimeout(() => { btn.textContent = label; }, 1800);
+    }
+  });
 
   /* ---------- price override ---------- */
   function openPriceEdit() {
@@ -1355,6 +1657,7 @@
     await writeLocal();
     renderPicker();
     renderAll();
+    loadExtras();
   }
 
   boot();

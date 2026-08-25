@@ -28,7 +28,6 @@ const QUERIES = [
 const TOP_N = 8; // how many cards to carry in each snapshot
 
 const today = () => new Date().toISOString().slice(0, 10);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function getJson(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
@@ -43,6 +42,7 @@ async function getJson(url, tries = 3) {
     }
   }
 }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function priceEur(c) {
   const p = c.cardmarket && c.cardmarket.prices;
@@ -68,7 +68,10 @@ async function main() {
           number: c.number || "",
           year: c.set && c.set.releaseDate ? c.set.releaseDate.slice(0, 4) : "",
           img: (c.images && (c.images.large || c.images.small)) || "",
-          eur: priceEur(c)
+          eur: priceEur(c),
+          avg1:  (c.cardmarket?.prices?.avg1)  ?? null,
+          avg7:  (c.cardmarket?.prices?.avg7)  ?? null,
+          avg30: (c.cardmarket?.prices?.avg30) ?? null
         }))
         .filter(c => c.eur != null)
         .sort((a, b) => b.eur - a.eur);
@@ -87,7 +90,8 @@ async function main() {
     d: today(),
     btc: { gbp: btc.gbp, eur: btc.eur, usd: btc.usd },
     cards: Object.fromEntries(top.map(c => [c.id, {
-      name: c.name, set: c.set, number: c.number, year: c.year, img: c.img, eur: c.eur
+      name: c.name, set: c.set, number: c.number, year: c.year, img: c.img,
+      eur: c.eur, avg1: c.avg1, avg7: c.avg7, avg30: c.avg30
     }]))
   };
 
@@ -102,6 +106,7 @@ async function main() {
   history.sort((a, b) => (a.d < b.d ? -1 : 1));
   if (history.length > KEEP) history = history.slice(-KEEP);
 
+  
   await writeFile(OUT, JSON.stringify(history, null, 0) + "\n");
 
   const champ = top[0];
