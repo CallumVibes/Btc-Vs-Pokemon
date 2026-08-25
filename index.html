@@ -133,6 +133,8 @@
     background:var(--line);border:1px solid var(--line);border-radius:3px;
     overflow:hidden;margin:14px 0 0;font-family:var(--data);font-size:12px}
   .rec > *{background:var(--ink-2);padding:10px 11px}
+  .rec .est{font-style:normal;color:var(--gold);font-size:8.5px;letter-spacing:.1em;
+    text-transform:uppercase;margin-left:5px}
   .rec .h{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
   .rec .n{text-align:right}
   .rec .up{color:var(--win)} .rec .down{color:var(--lose)} .rec .na{color:var(--dim)}
@@ -155,10 +157,10 @@
   .board-list .sats small{display:block;color:var(--dim);font-size:10px}
 
   /* form guide */
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:1px;
-    background:var(--line);border:1px solid var(--line);border-radius:3px;
-    overflow:hidden;margin:16px 0 0}
-  .stat{background:var(--ink-2);padding:14px 14px 15px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
+    gap:10px;margin:16px 0 0}
+  .stat{background:var(--ink-2);padding:14px 14px 15px;
+    border:1px solid var(--line);border-radius:3px}
   .stat__k{font-family:var(--data);font-size:9.5px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--dim);margin:0 0 7px}
   .stat__v{font-family:var(--display);font-size:19px;margin:0;line-height:1.15}
@@ -478,7 +480,7 @@
   const dec = new Intl.NumberFormat("en-GB",{maximumFractionDigits:1});
 
   const state = { history: [], range: 90, cardId: null, hosted: false, committed: 0,
-                  extras: {}, overrides: {}, market: null, btcDaily: [] };
+                  extras: {}, overrides: {}, market: null, btcDaily: [], btcYear: [] };
 
   /* ---------- local persistence (used when there's no committed history) ---------- */
   const LOCAL = "btc-vs-pokemon:local";
@@ -1131,13 +1133,40 @@
   // ago. That's enough to place three past points and stop the card reading a
   // flat 0% before the daily job has built up real snapshots.
   const AVG_ANCHORS = [
+    {key:"avg30", daysAgo:30},
     {key:"avg30", daysAgo:15},
     {key:"avg7",  daysAgo:3.5},
     {key:"avg1",  daysAgo:1}
   ];
 
+  function anchorPoints(c) {
+    const pts = [];
+    for (const a of AVG_ANCHORS) {
+      const v = c[a.key];
+      if (v != null && v > 0) pts.push({t:a.daysAgo, v});
+    }
+    if (c.eur > 0) pts.push({t:0, v:c.eur});
+    return pts.sort((x, y) => y.t - x.t);        // oldest first
+  }
+
+  // Linear interpolation between the anchors, so the reconstruction is a daily
+  // curve rather than four bare points.
+  function valueAt(pts, daysAgo) {
+    if (!pts.length) return null;
+    if (daysAgo >= pts[0].t) return pts[0].v;
+    if (daysAgo <= pts[pts.length-1].t) return pts[pts.length-1].v;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i+1];
+      if (daysAgo <= a.t && daysAgo >= b.t) {
+        const span = a.t - b.t;
+        return span === 0 ? b.v : a.v + (b.v - a.v) * ((a.t - daysAgo) / span);
+      }
+    }
+    return pts[pts.length-1].v;
+  }
+
   function btcAt(daysAgo) {
-    const pts = state.btcDaily;
+    const pts = state.btcYear.length ? state.btcYear : state.btcDaily;
     const l = latest();
     if (!pts.length) return l ? l.btc.gbp : null;
     const target = Date.now() - daysAgo * 86400000;
@@ -1153,23 +1182,22 @@
     const l = latest();
     const c = l && l.cards[id];
     if (!c) return [];
+    const pts = anchorPoints(c);
+    if (pts.length < 2) return [];
+
     const fx = l.btc.gbp / l.btc.eur;
     const o = overrideFor(id);
     const k = (o != null && c.eur > 0) ? o / (c.eur * fx) : 1;
 
+    const span = Math.min(30, days || 30);
     const out = [];
-    for (const a of AVG_ANCHORS) {
-      const v = c[a.key];
-      if (v == null || v <= 0) continue;
-      if (days && a.daysAgo > days) continue;
-      const btc = btcAt(a.daysAgo);
-      if (!btc) continue;
-      const d = new Date(Date.now() - a.daysAgo * 86400000).toISOString().slice(0, 10);
-      out.push({d, btc, card: v * fx * k, derived: true});
-    }
-    if (c.eur > 0) {
-      out.push({d: new Date().toISOString().slice(0, 10),
-                btc: l.btc.gbp, card: c.eur * fx * k, derived: true});
+    for (let d = Math.round(span); d >= 0; d--) {
+      const v = valueAt(pts, d), btc = btcAt(d);
+      if (v == null || !btc) continue;
+      out.push({
+        d: new Date(Date.now() - d * 86400000).toISOString().slice(0, 10),
+        btc, card: v * fx * k, derived: true
+      });
     }
     return out.length >= 2 ? out : [];
   }
@@ -1177,12 +1205,31 @@
   // Real snapshots always win. The reconstruction only fills in where the daily
   // job hasn't accumulated enough yet.
   function bestSeries(id, days, real) {
-    if (real.length >= 2) return real;
+    // Two snapshots a day apart tell you nothing about a month. Real data only
+    // wins once it actually moves and covers a decent slice of the window.
+    const flat = real.length > 0 && real.every(p => Math.abs(p.card - real[0].card) < 1e-9);
+    const spanDays = real.length >= 2
+      ? (new Date(real[real.length-1].d) - new Date(real[0].d)) / 86400000 : 0;
+    const enough = real.length >= 2 && !flat && (!days || spanDays >= days * 0.6);
+    if (enough) return real;
     const d = derivedSeries(id, days);
     return d.length >= 2 ? d : real;
   }
   const isDerived = s => s.length > 0 && !!s[0].derived;
   const MARKETS = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=gbp&ids=bitcoin";
+
+  // Bitcoin's own return over a window, straight from its daily closes rather
+  // than inferred from however many snapshots we happen to hold.
+  function btcReturnOver(days) {
+    const pts = state.btcYear.length ? state.btcYear : state.btcDaily;
+    const l = latest();
+    if (!pts.length || !l) return null;
+    if (!days) days = (Date.now() - new Date(pts[0][0])) / 86400000;
+    const target = Date.now() - days * 86400000;
+    if (pts[0][0] > target + 86400000 * 2) return null;   // window predates our data
+    const then = btcAt(days);
+    return then ? (l.btc.gbp / then - 1) * 100 : null;
+  }
 
   // Series for an arbitrary window, independent of the chart's own range.
   function seriesDays(id, days) {
@@ -1215,17 +1262,23 @@
     const host = el("recordTable");
     if (!host) return;
     const rows = [];
-    let btcWins = 0, decided = 0;
+    let btcWins = 0, decided = 0, anyEst = false;
 
     for (const w of WINDOWS) {
+      const b = btcReturnOver(w.days);
       const s = seriesDays(state.cardId, w.days);
-      if (s.length < 2) { rows.push({...w, na:true}); continue; }
-      const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
-      const c = (s[s.length-1].card / s[0].card - 1) * 100;
+
+      // The reconstruction only reaches back 30 days — it can't speak for a year.
+      const derivedTooShort = isDerived(s) && w.days > 30;
+      const c = (s.length >= 2 && !derivedTooShort)
+        ? (s[s.length-1].card / s[0].card - 1) * 100 : null;
+
+      if (b == null || c == null) { rows.push({...w, na:true}); continue; }
+      if (isDerived(s)) anyEst = true;
       const winner = b >= c ? "btc" : "card";
       if (winner === "btc") btcWins++;
       decided++;
-      rows.push({...w, b, c, winner, days_: s.length});
+      rows.push({...w, b, c, winner, est: isDerived(s)});
     }
 
     const foe = latest() && latest().cards[state.cardId];
@@ -1236,7 +1289,7 @@
       <span class="h n">${foeName}</span><span class="h n">Leader</span>
       ${rows.map(r => r.na
         ? `<span>${r.label}</span><span class="n na">—</span><span class="n na">—</span><span class="who na">no data</span>`
-        : `<span>${r.label}</span>
+        : `<span>${r.label}${r.est ? ' <em class="est">est</em>' : ""}</span>
            <span class="n ${r.b >= 0 ? "up" : "down"}">${pctText(r.b)}</span>
            <span class="n ${r.c >= 0 ? "up" : "down"}">${pctText(r.c)}</span>
            <span class="who who--${r.winner}">${r.winner === "btc" ? "BTC" : "CARD"}</span>`
@@ -1244,9 +1297,10 @@
     </div>`;
 
     el("recordSummary").textContent = decided
-      ? `Bitcoin leads ${btcWins} of ${decided} window${decided > 1 ? "s" : ""}. ` +
-        (decided < WINDOWS.length ? "The rest fill in as the daily job runs." : "Pick your favourite.")
-      : "Needs at least two daily snapshots before any window can be called.";
+      ? `Bitcoin leads ${btcWins} of ${decided} window${decided > 1 ? "s" : ""}.` +
+        (anyEst ? " Card figures marked est come from Cardmarket's rolling averages." : "") +
+        (decided < WINDOWS.length ? " Longer windows fill in as the daily job runs." : "")
+      : "Needs a little more data before any window can be called.";
   }
 
   function renderGrail() {
@@ -1378,6 +1432,10 @@
     try {
       const d = await getJson(CHART(30), 1);
       state.btcDaily = (d && d.prices) || [];
+    } catch (e) {}
+    try {
+      const y = await getJson(CHART(365), 1);
+      state.btcYear = (y && y.prices) || [];
     } catch (e) {}
     // The reconstructed card line needs these closes to place its past points,
     // so everything gets another pass once they arrive.

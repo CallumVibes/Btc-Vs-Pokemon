@@ -95,11 +95,76 @@ async function main() {
     }]))
   };
 
+  // First run: reconstruct the last 30 days from Cardmarket's rolling averages
+  // and bitcoin's daily closes, so the repo starts with a month of history
+  // instead of a single point. Marked est so it's never mistaken for measured.
+  async function backfill(history) {
+    if (history.length) return history;
+    let closes = [];
+    try {
+      const c = await getJson("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=gbp&days=30");
+      closes = (c && c.prices) || [];
+    } catch { return history; }
+    if (!closes.length) return history;
+
+    const btcAt = daysAgo => {
+      const t = Date.now() - daysAgo * 86400000;
+      let best = closes[0], gap = Infinity;
+      for (const p of closes) { const g = Math.abs(p[0] - t); if (g < gap) { gap = g; best = p; } }
+      return best[1];
+    };
+    const anchorsFor = c => {
+      const pts = [];
+      if (c.avg30 > 0) pts.push({t:30, v:c.avg30}, {t:15, v:c.avg30});
+      if (c.avg7  > 0) pts.push({t:3.5, v:c.avg7});
+      if (c.avg1  > 0) pts.push({t:1, v:c.avg1});
+      if (c.eur   > 0) pts.push({t:0, v:c.eur});
+      return pts.sort((a, b) => b.t - a.t);
+    };
+    const valueAt = (pts, d) => {
+      if (!pts.length) return null;
+      if (d >= pts[0].t) return pts[0].v;
+      if (d <= pts.at(-1).t) return pts.at(-1).v;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i+1];
+        if (d <= a.t && d >= b.t) {
+          const s = a.t - b.t;
+          return s === 0 ? b.v : a.v + (b.v - a.v) * ((a.t - d) / s);
+        }
+      }
+      return pts.at(-1).v;
+    };
+
+    const anchors = new Map(top.map(c => [c.id, anchorsFor(c)]));
+    const scale = btc.gbp / btcAt(0);           // keep FX consistent with today
+    const out = [];
+    for (let d = 30; d >= 1; d--) {
+      const gbp = btcAt(d) * scale;
+      const cards = {};
+      for (const c of top) {
+        const v = valueAt(anchors.get(c.id), d);
+        if (v == null) continue;
+        cards[c.id] = {name:c.name, set:c.set, number:c.number, year:c.year,
+                       img:c.img, eur:v, avg1:c.avg1, avg7:c.avg7, avg30:c.avg30};
+      }
+      if (!Object.keys(cards).length) continue;
+      out.push({
+        d: new Date(Date.now() - d * 86400000).toISOString().slice(0, 10),
+        btc: {gbp, eur: gbp / (btc.gbp / btc.eur), usd: gbp / (btc.gbp / btc.usd)},
+        cards, est: true
+      });
+    }
+    console.log(`backfilled ${out.length} reconstructed days`);
+    return out;
+  }
+
   let history = [];
   try {
     history = JSON.parse(await readFile(OUT, "utf8"));
     if (!Array.isArray(history)) history = [];
   } catch { /* first run */ }
+
+  history = await backfill(history);
 
   const i = history.findIndex(h => h.d === snapshot.d);
   if (i >= 0) history[i] = snapshot; else history.push(snapshot);
