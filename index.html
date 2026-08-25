@@ -1463,91 +1463,115 @@
     c.closePath();
   }
 
+  function drawBitcoinB(c, cx, cy, h, fill) {
+    c.fillStyle = fill;
+    c.font = `${Math.round(h * 1.38)}px Bungee, sans-serif`;
+    c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText("B", cx, cy);
+    c.textAlign = "left"; c.textBaseline = "alphabetic";
+    const sw = Math.max(2, h * 0.13), ext = h * 0.3;
+    for (const off of [-h * 0.24, h * 0.19]) {
+      c.fillRect(cx + off - sw / 2, cy - h * 0.62 - ext, sw, ext + h * 0.2);
+      c.fillRect(cx + off - sw / 2, cy + h * 0.42, sw, ext + h * 0.2);
+    }
+  }
+
   async function buildShareImage() {
     const l = latest();
     const foe = l && l.cards[state.cardId];
     if (!l || !foe) return null;
 
-    const W = 1080, H = 1350;
+    const W = 1080, H = 1080;
     const cv = document.createElement("canvas");
     cv.width = W; cv.height = H;
     const c = cv.getContext("2d");
 
     const g = c.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, "#16265A"); g.addColorStop(0.55, "#0B1436"); g.addColorStop(1, "#080C1C");
+    g.addColorStop(0, "#1B2A63"); g.addColorStop(0.5, "#0B1436"); g.addColorStop(1, "#080C1C");
     c.fillStyle = g; c.fillRect(0, 0, W, H);
 
     c.fillStyle = "#8A93B8";
-    c.font = "600 26px 'JetBrains Mono', monospace";
-    c.fillText("BITCOIN  VS  POKÉMON", 70, 96);
+    c.font = "600 25px 'JetBrains Mono', monospace";
+    c.fillText("BITCOIN  VS  POKÉMON", 64, 84);
 
-    // card art, or a drawn stand-in if the CDN blocks canvas use
+    // card art, or a drawn stand-in if the CDN won't allow a canvas read
     const art = foe.img ? await loadImage(foe.img) : null;
-    const cardW = 330, cardH = Math.round(cardW * 342 / 245), cardX = 70, cardY = 150;
+    const cardW = 300, cardH = Math.round(cardW * 342 / 245), cardX = 64, cardY = 132;
+    c.save();
+    roundRect(c, cardX, cardY, cardW, cardH, 16); c.clip();
     if (art) {
-      c.save();
-      roundRect(c, cardX, cardY, cardW, cardH, 18); c.clip();
       c.drawImage(art, cardX, cardY, cardW, cardH);
-      c.restore();
     } else {
-      c.fillStyle = "#FFCB05"; roundRect(c, cardX, cardY, cardW, cardH, 18); c.fill();
+      c.fillStyle = "#FFCB05"; c.fillRect(cardX, cardY, cardW, cardH);
       c.fillStyle = "#21418F";
-      roundRect(c, cardX + 26, cardY + 26, cardW - 52, cardH - 52, 10); c.fill();
+      roundRect(c, cardX + 24, cardY + 30, cardW - 48, cardH - 60, 10); c.fill();
+      const r = cardW * 0.26, ccx = cardX + cardW / 2, ccy = cardY + cardH / 2;
+      c.fillStyle = "#F7931A";
+      c.beginPath(); c.arc(ccx, ccy, r, 0, 7); c.fill();
+      drawBitcoinB(c, ccx, ccy, r * 1.05, "#1A0F00");
     }
-    c.strokeStyle = "rgba(240,231,210,.35)"; c.lineWidth = 3;
-    roundRect(c, cardX, cardY, cardW, cardH, 18); c.stroke();
+    c.restore();
+    c.strokeStyle = "rgba(240,231,210,.3)"; c.lineWidth = 3;
+    roundRect(c, cardX, cardY, cardW, cardH, 16); c.stroke();
 
-    const rx = cardX + cardW + 56;
-    c.fillStyle = "#8A93B8"; c.font = "500 24px 'JetBrains Mono', monospace";
-    c.fillText("ONE BITCOIN BUYS", rx, cardY + 54);
+    // right column
+    const rx = cardX + cardW + 54;
+    c.fillStyle = "#8A93B8"; c.font = "500 23px 'JetBrains Mono', monospace";
+    c.fillText("ONE BITCOIN BUYS", rx, cardY + 42);
 
     const gbp = priceOf(state.cardId, l);
     const count = gbp > 0 ? l.btc.gbp / gbp : 0;
     const countTxt = count >= 100 ? num.format(Math.round(count))
                    : count >= 1 ? dec.format(count) : count.toFixed(2);
-    c.fillStyle = "#E8C25A"; c.font = "108px Bungee, sans-serif";
-    c.fillText(countTxt, rx, cardY + 176);
+    c.fillStyle = "#E8C25A"; c.font = "104px Bungee, sans-serif";
+    c.fillText(countTxt, rx, cardY + 150);
 
-    c.fillStyle = "#F0E7D2"; c.font = "500 34px 'Space Grotesk', sans-serif";
-    const name = foe.name.length > 16 ? foe.name.slice(0, 15) + "…" : foe.name;
-    c.fillText(name, rx, cardY + 232);
-    c.fillStyle = "#8A93B8"; c.font = "400 24px 'JetBrains Mono', monospace";
-    c.fillText(foe.set || "", rx, cardY + 272);
+    c.fillStyle = "#F0E7D2"; c.font = "700 36px 'Space Grotesk', sans-serif";
+    c.fillText(foe.name.length > 17 ? foe.name.slice(0, 16) + "…" : foe.name, rx, cardY + 206);
+    c.fillStyle = "#8A93B8"; c.font = "400 23px 'JetBrains Mono', monospace";
+    c.fillText([foe.set, foe.year].filter(Boolean).join(" · "), rx, cardY + 244);
 
-    c.fillStyle = "#F7931A";
-    roundRect(c, rx, cardY + 306, 400, 62, 6); c.fill();
-    c.fillStyle = "#1A0F00"; c.font = "700 27px 'JetBrains Mono', monospace";
-    c.fillText(num.format(Math.round(gbp / l.btc.gbp * 1e8)) + " sats each", rx + 22, cardY + 347);
+    c.fillStyle = "#F7931A"; roundRect(c, rx, cardY + 278, 402, 58, 6); c.fill();
+    c.fillStyle = "#1A0F00"; c.font = "700 25px 'JetBrains Mono', monospace";
+    c.fillText(num.format(Math.round(gbp / l.btc.gbp * 1e8)) + " sats each", rx + 20, cardY + 316);
 
-    // the scoreboard for the current chart window
+    c.fillStyle = "#8A93B8"; c.font = "400 22px 'JetBrains Mono', monospace";
+    c.fillText(gbpFine.format(gbp) + (overrideFor(state.cardId) != null ? " · your price" : " · raw"),
+               rx, cardY + 382);
+
+    // scoreboard, two columns across the lower half
     const s = series(state.cardId);
-    const y0 = cardY + cardH + 110;
-    c.fillStyle = "rgba(240,231,210,.14)"; c.fillRect(70, y0 - 56, W - 140, 2);
+    const yTop = cardY + cardH + 150;
+    c.fillStyle = "rgba(240,231,210,.14)"; c.fillRect(64, yTop - 78, W - 128, 2);
 
     if (s.length >= 2) {
       const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
       const cp = (s[s.length-1].card / s[0].card - 1) * 100;
-      const rows = [["BITCOIN", b, "#F7931A"], [foe.name.toUpperCase(), cp, "#7FD8E8"]];
-      rows.forEach(([label, v, col], i) => {
-        const y = y0 + i * 118;
-        c.fillStyle = col; c.beginPath(); c.arc(84, y - 12, 11, 0, 7); c.fill();
-        c.fillStyle = "#8A93B8"; c.font = "500 26px 'JetBrains Mono', monospace";
-        c.fillText(String(label).slice(0, 22), 112, y - 3);
-        c.fillStyle = v >= 0 ? "#5BD98A" : "#E8657C";
-        c.font = "64px Bungee, sans-serif";
-        c.fillText(pctText(v), 112, y + 66);
-      });
+      const cols = [
+        {x:64,       label:"BITCOIN", v:b,  dot:"#F7931A"},
+        {x:64 + 500, label:foe.name.toUpperCase(), v:cp, dot:"#7FD8E8"}
+      ];
+      for (const col of cols) {
+        c.fillStyle = col.dot;
+        c.beginPath(); c.arc(col.x + 11, yTop - 9, 11, 0, 7); c.fill();
+        c.fillStyle = "#8A93B8"; c.font = "500 24px 'JetBrains Mono', monospace";
+        c.fillText(String(col.label).slice(0, 18), col.x + 32, yTop);
+        c.fillStyle = col.v >= 0 ? "#5BD98A" : "#E8657C";
+        c.font = "88px Bungee, sans-serif";
+        c.fillText(pctText(col.v), col.x, yTop + 100);
+      }
       c.fillStyle = "#8A93B8"; c.font = "400 23px 'JetBrains Mono', monospace";
-      c.fillText(`since ${pretty(s[0].d)}`, 112, y0 + 250);
+      const est = isDerived(s) ? "  ·  card estimated from Cardmarket averages" : "";
+      c.fillText(`since ${pretty(s[0].d)}${est}`, 64, yTop + 164);
     } else {
-      c.fillStyle = "#8A93B8"; c.font = "400 27px 'JetBrains Mono', monospace";
-      c.fillText("Tracking just started — no window to compare yet.", 84, y0 + 20);
+      c.fillStyle = "#8A93B8"; c.font = "400 26px 'JetBrains Mono', monospace";
+      c.fillText("Tracking just started — no window to compare yet.", 64, yTop + 10);
     }
 
-    c.fillStyle = "#8A93B8"; c.font = "400 22px 'JetBrains Mono', monospace";
-    c.fillText(new Date().toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"}), 70, H - 62);
+    c.fillStyle = "#8A93B8"; c.font = "400 21px 'JetBrains Mono', monospace";
+    c.fillText(new Date().toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"}), 64, H - 52);
     c.textAlign = "right";
-    c.fillText(location.host || "bitcoin vs pokémon", W - 70, H - 62);
+    c.fillText(location.host || "bitcoin vs pokémon", W - 64, H - 52);
     c.textAlign = "left";
 
     return new Promise(res => cv.toBlob(res, "image/png"));
