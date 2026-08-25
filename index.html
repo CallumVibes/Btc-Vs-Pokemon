@@ -369,6 +369,8 @@
 
   <div class="controls">
     <div class="seg" role="group" aria-label="Time range">
+      <button data-range="7">7d</button>
+      <button data-range="14">14d</button>
       <button data-range="30">30d</button>
       <button data-range="90" aria-pressed="true">90d</button>
       <button data-range="365">1y</button>
@@ -480,7 +482,7 @@
   const dec = new Intl.NumberFormat("en-GB",{maximumFractionDigits:1});
 
   const state = { history: [], range: 90, cardId: null, hosted: false, committed: 0,
-                  extras: {}, overrides: {}, market: null, btcDaily: [], btcYear: [] };
+                  extras: {}, overrides: {}, market: null, btcDaily: [], btcYear: [], rangeAuto: true };
 
   /* ---------- local persistence (used when there's no committed history) ---------- */
   const LOCAL = "btc-vs-pokemon:local";
@@ -758,7 +760,8 @@
       return;
     }
     const shown = Math.round((new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000);
-    el("chartHint").textContent = (isDerived(s)
+    el("chartHint").textContent = (state.rangeAuto && state.range
+      ? `Longest window the data covers so far. ` : "") + (isDerived(s)
       ? "Card line reconstructed from Cardmarket's rolling averages. "
       : "Both rebased to 100 at the start of the window. ") + `Showing ${shown} days.`;
 
@@ -842,6 +845,7 @@
   }, {passive:true});
 
   document.querySelectorAll("[data-range]").forEach(b => b.addEventListener("click", () => {
+    state.rangeAuto = false;
     state.range = parseInt(b.dataset.range, 10);
     document.querySelectorAll("[data-range]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     renderBoard(); renderChart();
@@ -1482,6 +1486,7 @@
     } catch (e) {}
     // The reconstructed card line needs these closes to place its past points,
     // so everything gets another pass once they arrive.
+    if (state.rangeAuto) applyRange(bestRange(), true);
     renderAll();
   }
 
@@ -1519,6 +1524,43 @@
     }
   }
 
+  // A drawn card in the TCG's own grammar — yellow border, holo panel, coin as
+  // the artwork. Used when the image CDN won't permit a canvas read.
+  function drawCardStandIn(c, x, y, w, h) {
+    c.fillStyle = "#FFCB05";
+    roundRect(c, x, y, w, h, 16); c.fill();
+    c.fillStyle = "#F5F0E4";
+    roundRect(c, x + w * 0.075, y + h * 0.055, w * 0.85, h * 0.89, 10); c.fill();
+
+    const ax = x + w * 0.125, ay = y + h * 0.115, aw = w * 0.75, ah = h * 0.60;
+    c.fillStyle = "#21418F";
+    roundRect(c, ax, ay, aw, ah, 7); c.fill();
+
+    c.save();
+    roundRect(c, ax, ay, aw, ah, 7); c.clip();
+    const stripes = ["rgba(255,90,150,.5)", "rgba(255,200,60,.5)", "rgba(90,255,190,.5)"];
+    c.lineWidth = aw * 0.09;
+    stripes.forEach((col, i) => {
+      c.strokeStyle = col;
+      c.beginPath();
+      c.moveTo(ax + aw * (0.12 + i * 0.26), ay + ah);
+      c.lineTo(ax + aw * (0.30 + i * 0.26), ay);
+      c.stroke();
+    });
+    c.restore();
+
+    const r = aw * 0.27, ccx = ax + aw / 2, ccy = ay + ah / 2;
+    c.fillStyle = "#F7931A";
+    c.beginPath(); c.arc(ccx, ccy, r, 0, 7); c.fill();
+    drawBitcoinB(c, ccx, ccy, r * 1.0, "#1A0F00");
+
+    c.fillStyle = "#E23A3A";
+    c.font = `700 ${Math.round(h * 0.045)}px 'JetBrains Mono', monospace`;
+    c.textAlign = "right";
+    c.fillText("HP", x + w * 0.90, y + h * 0.095);
+    c.textAlign = "left";
+  }
+
   async function buildShareImage() {
     const l = latest();
     const foe = l && l.cards[state.cardId];
@@ -1535,69 +1577,60 @@
 
     c.fillStyle = "#8A93B8";
     c.font = "600 25px 'JetBrains Mono', monospace";
-    c.fillText("BITCOIN  VS  POKÉMON", 64, 84);
+    c.fillText("BITCOIN  VS  POKÉMON", 64, 82);
 
-    // card art, or a drawn stand-in if the CDN won't allow a canvas read
     const art = foe.img ? await loadImage(foe.img) : null;
-    const cardW = 300, cardH = Math.round(cardW * 342 / 245), cardX = 64, cardY = 132;
-    c.save();
-    roundRect(c, cardX, cardY, cardW, cardH, 16); c.clip();
+    const cardW = 296, cardH = Math.round(cardW * 342 / 245), cardX = 64, cardY = 126;
     if (art) {
+      c.save();
+      roundRect(c, cardX, cardY, cardW, cardH, 16); c.clip();
       c.drawImage(art, cardX, cardY, cardW, cardH);
+      c.restore();
+      c.strokeStyle = "rgba(240,231,210,.3)"; c.lineWidth = 3;
+      roundRect(c, cardX, cardY, cardW, cardH, 16); c.stroke();
     } else {
-      c.fillStyle = "#FFCB05"; c.fillRect(cardX, cardY, cardW, cardH);
-      c.fillStyle = "#21418F";
-      roundRect(c, cardX + 24, cardY + 30, cardW - 48, cardH - 60, 10); c.fill();
-      const r = cardW * 0.26, ccx = cardX + cardW / 2, ccy = cardY + cardH / 2;
-      c.fillStyle = "#F7931A";
-      c.beginPath(); c.arc(ccx, ccy, r, 0, 7); c.fill();
-      drawBitcoinB(c, ccx, ccy, r * 1.05, "#1A0F00");
+      drawCardStandIn(c, cardX, cardY, cardW, cardH);
     }
-    c.restore();
-    c.strokeStyle = "rgba(240,231,210,.3)"; c.lineWidth = 3;
-    roundRect(c, cardX, cardY, cardW, cardH, 16); c.stroke();
 
-    // right column
-    const rx = cardX + cardW + 54;
+    const rx = cardX + cardW + 52;
     c.fillStyle = "#8A93B8"; c.font = "500 23px 'JetBrains Mono', monospace";
-    c.fillText("ONE BITCOIN BUYS", rx, cardY + 42);
+    c.fillText("ONE BITCOIN BUYS", rx, cardY + 40);
 
     const gbp = priceOf(state.cardId, l);
     const count = gbp > 0 ? l.btc.gbp / gbp : 0;
     const countTxt = count >= 100 ? num.format(Math.round(count))
                    : count >= 1 ? dec.format(count) : count.toFixed(2);
     c.fillStyle = "#E8C25A"; c.font = "104px Bungee, sans-serif";
-    c.fillText(countTxt, rx, cardY + 150);
+    c.fillText(countTxt, rx, cardY + 146);
 
     c.fillStyle = "#F0E7D2"; c.font = "700 36px 'Space Grotesk', sans-serif";
-    c.fillText(foe.name.length > 17 ? foe.name.slice(0, 16) + "…" : foe.name, rx, cardY + 206);
+    c.fillText(foe.name.length > 17 ? foe.name.slice(0, 16) + "…" : foe.name, rx, cardY + 200);
     c.fillStyle = "#8A93B8"; c.font = "400 23px 'JetBrains Mono', monospace";
-    c.fillText([foe.set, foe.year].filter(Boolean).join(" · "), rx, cardY + 244);
+    c.fillText([foe.set, foe.year].filter(Boolean).join(" · "), rx, cardY + 238);
 
-    c.fillStyle = "#F7931A"; roundRect(c, rx, cardY + 278, 402, 58, 6); c.fill();
+    c.fillStyle = "#F7931A"; roundRect(c, rx, cardY + 272, 402, 58, 6); c.fill();
     c.fillStyle = "#1A0F00"; c.font = "700 25px 'JetBrains Mono', monospace";
-    c.fillText(num.format(Math.round(gbp / l.btc.gbp * 1e8)) + " sats each", rx + 20, cardY + 316);
+    c.fillText(num.format(Math.round(gbp / l.btc.gbp * 1e8)) + " sats each", rx + 20, cardY + 310);
 
     c.fillStyle = "#8A93B8"; c.font = "400 22px 'JetBrains Mono', monospace";
     c.fillText(gbpFine.format(gbp) + (overrideFor(state.cardId) != null ? " · your price" : " · raw"),
-               rx, cardY + 382);
+               rx, cardY + 372);
 
-    // scoreboard, two columns across the lower half
+    // ---- lower half ----
     const s = series(state.cardId);
     const span = s.length >= 2
       ? (new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000 : 0;
-    const covers = !state.range || span >= state.range * 0.6;
-    const yTop = cardY + cardH + 150;
-    c.fillStyle = "rgba(240,231,210,.14)"; c.fillRect(64, yTop - 78, W - 128, 2);
+    const covers = s.length >= 2 && (!state.range || span >= state.range * 0.6);
 
-    if (s.length >= 2 && covers) {
+    const yDiv = cardY + cardH + 78;
+    c.fillStyle = "rgba(240,231,210,.14)"; c.fillRect(64, yDiv, W - 128, 2);
+    const yTop = yDiv + 76;
+
+    if (covers) {
       const b = (s[s.length-1].btc / s[0].btc - 1) * 100;
       const cp = (s[s.length-1].card / s[0].card - 1) * 100;
-      const cols = [
-        {x:64,       label:"BITCOIN", v:b,  dot:"#F7931A"},
-        {x:64 + 500, label:foe.name.toUpperCase(), v:cp, dot:"#7FD8E8"}
-      ];
-      for (const col of cols) {
+      for (const col of [{x:64, label:"BITCOIN", v:b, dot:"#F7931A"},
+                         {x:64 + 500, label:foe.name.toUpperCase(), v:cp, dot:"#7FD8E8"}]) {
         c.fillStyle = col.dot;
         c.beginPath(); c.arc(col.x + 11, yTop - 9, 11, 0, 7); c.fill();
         c.fillStyle = "#8A93B8"; c.font = "500 24px 'JetBrains Mono', monospace";
@@ -1607,19 +1640,44 @@
         c.fillText(pctText(col.v), col.x, yTop + 100);
       }
       c.fillStyle = "#8A93B8"; c.font = "400 23px 'JetBrains Mono', monospace";
-      const est = isDerived(s) ? "  ·  card estimated from Cardmarket averages" : "";
-      c.fillText(`since ${pretty(s[0].d)}${est}`, 64, yTop + 164);
+      c.fillText(`over ${Math.round(span)} days${isDerived(s) ? "  ·  card estimated from Cardmarket averages" : ""}`,
+                 64, yTop + 164);
     } else {
-      c.fillStyle = "#8A93B8"; c.font = "400 26px 'JetBrains Mono', monospace";
+      // Nothing to compare yet — show the board instead of leaving it blank.
+      c.fillStyle = "#8A93B8"; c.font = "500 24px 'JetBrains Mono', monospace";
+      c.fillText("TODAY'S BOARD, IN SATS", 64, yTop - 6);
+
+      const rows = Object.entries(l.cards)
+        .map(([id, cd]) => ({cd, gbp: priceOf(id, l)}))
+        .filter(r => r.gbp != null)
+        .sort((a, b) => b.gbp - a.gbp)
+        .slice(0, 3);
+
+      rows.forEach((r, i) => {
+        const y = yTop + 46 + i * 62;
+        c.fillStyle = i === 0 ? "rgba(33,65,143,.55)" : "rgba(16,24,56,.75)";
+        roundRect(c, 64, y - 34, W - 128, 52, 5); c.fill();
+        c.fillStyle = "#8A93B8"; c.font = "400 22px 'JetBrains Mono', monospace";
+        c.fillText(String(i + 1), 84, y);
+        c.fillStyle = "#F0E7D2"; c.font = "500 26px 'Space Grotesk', sans-serif";
+        c.fillText(r.cd.name.length > 24 ? r.cd.name.slice(0, 23) + "…" : r.cd.name, 122, y);
+        c.fillStyle = "#F7931A"; c.font = "700 24px 'JetBrains Mono', monospace";
+        c.textAlign = "right";
+        c.fillText(num.format(Math.round(r.gbp / l.btc.gbp * 1e8)), W - 88, y);
+        c.textAlign = "left";
+      });
+
+      c.fillStyle = "#8A93B8"; c.font = "400 21px 'JetBrains Mono', monospace";
       c.fillText(span >= 2
-        ? `Only ${Math.round(span)} days of card data — too short to call this window.`
-        : "Tracking just started — no window to compare yet.", 64, yTop + 10);
+        ? `Only ${Math.round(span)} days of card history so far — too short to call a winner.`
+        : "Tracking has just started — no window to compare yet.",
+        64, yTop + 46 + rows.length * 62 + 26);
     }
 
     c.fillStyle = "#8A93B8"; c.font = "400 21px 'JetBrains Mono', monospace";
-    c.fillText(new Date().toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"}), 64, H - 52);
+    c.fillText(new Date().toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"}), 64, H - 48);
     c.textAlign = "right";
-    c.fillText(location.host || "bitcoin vs pokémon", W - 64, H - 52);
+    c.fillText(location.host || "bitcoin vs pokémon", W - 64, H - 48);
     c.textAlign = "left";
 
     return new Promise(res => cv.toBlob(res, "image/png"));
@@ -1754,7 +1812,27 @@
     return history;
   }
 
-  // Every load starts on the priciest card. A manual pick lasts the session only.
+  // Land on the longest window the data can honestly fill, rather than
+  // defaulting to 90 days and showing an empty board on day one.
+  function bestRange() {
+    const options = [365, 90, 30, 14, 7];
+    for (const days of options) {
+      const s = seriesDays(state.cardId, days);
+      if (s.length < 2) continue;
+      const span = (new Date(s[s.length-1].d) - new Date(s[0].d)) / 86400000;
+      if (span >= days * 0.6) return days;
+    }
+    const all = seriesDays(state.cardId, 0);
+    return all.length >= 2 ? 0 : 7;
+  }
+
+  function applyRange(days, auto) {
+    state.range = days;
+    document.querySelectorAll("[data-range]").forEach(x =>
+      x.setAttribute("aria-pressed", String(parseInt(x.dataset.range, 10) === days)));
+    if (auto) state.rangeAuto = true;
+  }
+
   function pickCard() {
     state.cardId = championId();
   }
@@ -1806,6 +1884,7 @@
     }
 
     pickCard();
+    applyRange(bestRange(), true);
     await writeLocal();
     renderPicker();
     renderAll();
