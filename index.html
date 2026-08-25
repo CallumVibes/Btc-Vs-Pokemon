@@ -797,7 +797,27 @@
       });
   }
 
-  function renderAll() { renderChampion(); renderBoard(); renderChart(); renderRecord(); renderGrail(); renderStats(); }
+  // Each panel renders independently. Without this, one thrown error takes the
+  // whole render down and later panels just sit there looking unloaded.
+  function safe(name, fn) {
+    try { fn(); }
+    catch (e) {
+      console.error(name + " failed:", e);
+      const host = {renderRecord:"recordTable", renderGrail:"grailBoard", renderStats:"statGrid"}[name];
+      if (host && el(host)) {
+        el(host).innerHTML = `<div class="state"><strong>${name} hit an error.</strong>${e.message}</div>`;
+      }
+    }
+  }
+
+  function renderAll() {
+    safe("renderChampion", renderChampion);
+    safe("renderBoard", renderBoard);
+    safe("renderChart", renderChart);
+    safe("renderRecord", renderRecord);
+    safe("renderGrail", renderGrail);
+    safe("renderStats", renderStats);
+  }
 
   /* ---------- interactions ---------- */
   el("frame").addEventListener("pointermove", e => {

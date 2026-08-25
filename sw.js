@@ -2,7 +2,7 @@
 // Shell is cached so the app opens instantly and works offline.
 // Price feeds are never cached: a stale price is worse than no price.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = "shell-" + VERSION;
 const FONTS = "fonts-" + VERSION;
 const DATA  = "data-" + VERSION;
@@ -78,7 +78,14 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  // 5. Everything same-origin: cache-first, refreshed in the background.
+  // 5. The page itself: network-first. Cache-first here means an installed app
+  // keeps showing an old build long after you've pushed a new one.
+  if (req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith(".html")) {
+    e.respondWith(networkFirst(req, SHELL));
+    return;
+  }
+
+  // 6. Other same-origin assets: cache-first, refreshed in the background.
   if (url.origin === self.location.origin) {
     e.respondWith(staleWhileRevalidate(req, SHELL));
   }
