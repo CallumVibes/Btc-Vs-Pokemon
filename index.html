@@ -144,10 +144,15 @@
   /* grail board */
   .board-list{list-style:none;margin:16px 0 0;padding:0;
     border:1px solid var(--line);border-radius:3px;overflow:hidden}
-  .board-list li{display:flex;align-items:center;gap:11px;padding:10px 12px;
-    background:var(--ink-2);border-bottom:1px solid var(--line)}
+  .board-list li{border-bottom:1px solid var(--line)}
   .board-list li:last-child{border-bottom:none}
-  .board-list li.is-current{background:rgba(33,65,143,.55)}
+  .board-row{display:flex;align-items:center;gap:11px;width:100%;
+    padding:10px 12px;background:var(--ink-2);border:none;cursor:pointer;
+    text-align:left;font-family:var(--body);letter-spacing:0;text-transform:none;
+    font-weight:400;border-radius:0;transition:background .16s ease}
+  .board-row:hover{background:var(--kanto)}
+  .board-row.is-current{background:rgba(33,65,143,.55)}
+  .board-row:focus-visible{outline:2px solid var(--foil);outline-offset:-2px}
   .board-list .rank{font-family:var(--data);font-size:11px;color:var(--dim);width:18px;flex:none}
   .board-list img{width:26px;border-radius:2px;flex:none}
   .board-list .nm{flex:1;min-width:0;font-size:13px;font-weight:500;
@@ -1377,13 +1382,16 @@
       .sort((a, b) => b.gbp - a.gbp);
 
     host.innerHTML = rows.map((r, i) => `
-      <li class="${r.id === state.cardId ? "is-current" : ""}">
-        <span class="rank">${i + 1}</span>
-        ${r.c.img ? `<img src="${r.c.img}" alt="" loading="lazy">` : ""}
-        <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}${
-          r.c.avg1 == null && r.c.cmp == null ? " · trend only" : ""}</small></span>
-        <span class="sats">${num.format(Math.round(r.gbp / l.btc.gbp * 1e8))}
-          <small>${gbpFmt.format(r.gbp)}</small></span>
+      <li>
+        <button class="board-row${r.id === state.cardId ? " is-current" : ""}" data-pick="${r.id}"
+                aria-label="Compare bitcoin against ${r.c.name}">
+          <span class="rank">${i + 1}</span>
+          ${r.c.img ? `<img src="${r.c.img}" alt="" loading="lazy">` : ""}
+          <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}${
+            r.c.avg1 == null && r.c.cmp == null ? " · trend only" : ""}</small></span>
+          <span class="sats">${num.format(Math.round(r.gbp / l.btc.gbp * 1e8))}
+            <small>${gbpFmt.format(r.gbp)}</small></span>
+        </button>
       </li>`).join("");
   }
 
@@ -1515,14 +1523,25 @@
   }
 
   /* ---------- share image ---------- */
-  function loadImage(src) {
+  function tryLoad(url) {
     return new Promise(resolve => {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
-      img.src = src;
+      img.src = url;
     });
+  }
+
+  // Drawing an image onto a canvas needs a CORS-permitted read, which is
+  // stricter than simply displaying it — the card CDN allows the second but not
+  // always the first. If the direct load is refused, go via an image proxy that
+  // does send the header. Falls through to a drawn card if both fail.
+  async function loadImage(src) {
+    const direct = await tryLoad(src);
+    if (direct) return direct;
+    const bare = src.replace(/^https?:\/\//, "");
+    return await tryLoad("https://images.weserv.nl/?url=" + encodeURIComponent(bare) + "&output=png");
   }
 
   function roundRect(c, x, y, w, h, r) {
@@ -1585,6 +1604,8 @@
     c.textAlign = "left";
   }
 
+  let shareNoArt = false;
+
   async function buildShareImage() {
     const l = latest();
     const foe = l && l.cards[state.cardId];
@@ -1603,7 +1624,7 @@
     c.font = "600 25px 'JetBrains Mono', monospace";
     c.fillText("BITCOIN  VS  POKÉMON", 64, 82);
 
-    const art = foe.img ? await loadImage(foe.img) : null;
+    const art = (foe.img && !shareNoArt) ? await loadImage(foe.img) : null;
     const cardW = 296, cardH = Math.round(cardW * 342 / 245), cardX = 64, cardY = 126;
     if (art) {
       c.save();
@@ -1704,7 +1725,18 @@
     c.fillText(location.host || "bitcoin vs pokémon", W - 64, H - 48);
     c.textAlign = "left";
 
-    return new Promise(res => cv.toBlob(res, "image/png"));
+    // A tainted canvas throws on export. If that happens, the artwork wasn't
+    // safe to use after all — redraw with the stand-in and try again.
+    try {
+      return await new Promise((res, rej) => {
+        try { cv.toBlob(b => b ? res(b) : rej(new Error("no blob")), "image/png"); }
+        catch (err) { rej(err); }
+      });
+    } catch (err) {
+      if (!art) throw err;
+      shareNoArt = true;
+      return buildShareImage();
+    }
   }
 
   el("shareBtn").addEventListener("click", async () => {
@@ -1713,6 +1745,7 @@
     btn.textContent = "…";
     try {
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      shareNoArt = false;
       const blob = await buildShareImage();
       if (!blob) throw new Error("nothing to render");
       const file = new File([blob], "btc-vs-pokemon.png", {type:"image/png"});
@@ -1763,6 +1796,16 @@
     delete state.overrides[state.cardId];
     writeLocal();
     renderAll();
+  });
+
+  el("grailBoard").addEventListener("click", e => {
+    const row = e.target.closest("[data-pick]");
+    if (!row) return;
+    state.cardId = row.dataset.pick;
+    if (state.rangeAuto) applyRange(bestRange(), true);
+    renderPicker();
+    renderAll();
+    document.querySelector(".champ").scrollIntoView({behavior:"smooth", block:"start"});
   });
 
   el("pick").addEventListener("change", () => {

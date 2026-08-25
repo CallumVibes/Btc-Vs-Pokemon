@@ -2,7 +2,7 @@
 // Shell is cached so the app opens instantly and works offline.
 // Price feeds are never cached: a stale price is worse than no price.
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL = "shell-" + VERSION;
 const FONTS = "fonts-" + VERSION;
 const DATA  = "data-" + VERSION;
@@ -63,7 +63,7 @@ self.addEventListener("fetch", e => {
   // 2. Card images: straight to the network. If these get cached from a plain
   // <img> request, a later canvas read with crossOrigin fails CORS and the
   // share image loses its artwork.
-  if (url.hostname.endsWith("pokemontcg.io")) return;
+  if (url.hostname.endsWith("pokemontcg.io") || url.hostname === "images.weserv.nl") return;
 
   // 3. The committed snapshot file: network first, fall back to the last copy.
   if (url.pathname.endsWith("history.json")) {
