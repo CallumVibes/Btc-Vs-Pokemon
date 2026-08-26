@@ -1236,11 +1236,11 @@
   // ago. That's enough to place three past points and stop the card reading a
   // flat 0% before the daily job has built up real snapshots.
   const AVG_ANCHORS = [
-    {key:"avg30", daysAgo:30},
     {key:"avg30", daysAgo:15},
     {key:"avg7",  daysAgo:3.5},
-    {key:"avg1",  daysAgo:1}
+    {key:"avg1",  daysAgo:0.5}
   ];
+  const RECON_SPAN = 15;   // the oldest anchor sits here; beyond it we'd be inventing shape
   const RECON_LIMIT = 45;   // % over 30 days beyond which we distrust the averages
 
   // Every point must be the same kind of number. trendPrice is Cardmarket's
@@ -1274,8 +1274,19 @@
     return pts[pts.length-1].v;
   }
 
+  // Bitcoin's own history, taken from the committed snapshots first. Those are
+  // already on disk and can't be rate-limited — the CoinGecko chart calls can,
+  // and when they failed bitcoin appeared not to move at all.
+  function btcSeries() {
+    const fromHistory = state.history
+      .filter(h => h.btc && h.btc.gbp > 0)
+      .map(h => [new Date(h.d + "T12:00:00Z").getTime(), h.btc.gbp]);
+    const fromChart = state.btcYear.length ? state.btcYear : state.btcDaily;
+    return [...fromHistory, ...fromChart].sort((a, b) => a[0] - b[0]);
+  }
+
   function btcAt(daysAgo) {
-    const pts = state.btcYear.length ? state.btcYear : state.btcDaily;
+    const pts = btcSeries();
     const l = latest();
     if (!pts.length) return l ? l.btc.gbp : null;
     const target = Date.now() - daysAgo * 86400000;
@@ -1305,7 +1316,7 @@
     if (!oldest || !newest) return [];
     if (Math.abs(newest / oldest - 1) * 100 > RECON_LIMIT) return [];
 
-    const span = Math.min(30, days || 30);
+    const span = Math.min(RECON_SPAN, days || RECON_SPAN);
     const out = [];
     for (let d = Math.round(span); d >= 0; d--) {
       const v = valueAt(pts, d), btc = btcAt(d);
@@ -1360,7 +1371,7 @@
   // Bitcoin's own return over a window, straight from its daily closes rather
   // than inferred from however many snapshots we happen to hold.
   function btcReturnOver(days) {
-    const pts = state.btcYear.length ? state.btcYear : state.btcDaily;
+    const pts = btcSeries();
     const l = latest();
     if (!pts.length || !l) return null;
     if (!days) days = (Date.now() - new Date(pts[0][0])) / 86400000;
@@ -1546,7 +1557,7 @@
     }
 
     // 5. volatility, side by side
-    const btcVol = avgMove(state.btcDaily.map(p => p[1]));
+    const btcVol = avgMove(btcSeries().map(p => p[1]));
     const cardVol = avgMove(cs.map(p => p.card));
     if (btcVol != null) {
       cards.push({
