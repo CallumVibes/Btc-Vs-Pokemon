@@ -13,19 +13,26 @@ const KEEP = 3650; // ~10 years of daily snapshots
 // The grail shortlist. Each query returns a handful of cards; we keep the
 // priciest from each. Edit this list if you'd rather track different cards.
 const QUERIES = [
+  // Base Set
   'name:charizard set.id:base1',
   'name:blastoise set.id:base1',
   'name:venusaur set.id:base1',
   'name:pikachu set.id:base1',
+  'name:mewtwo set.id:base1',
+  // vintage chase
   'name:lugia set.id:neo1',
+  'name:umbreon rarity:"Rare Holo Star"',
+  // modern chase
   'name:umbreon subtypes:VMAX',
   'name:rayquaza subtypes:VMAX',
   'name:charizard subtypes:VMAX',
   'name:giratina subtypes:VSTAR',
-  'name:mewtwo set.id:base1'
+  // promos and oddities
+  'name:rayquaza set.id:np',
+  'name:pikachu set.id:mcd19'
 ];
 
-const TOP_N = 8; // how many cards to carry in each snapshot
+const TOP_N = 16; // how many cards to carry in each snapshot
 
 const today = () => new Date().toISOString().slice(0, 10);
 

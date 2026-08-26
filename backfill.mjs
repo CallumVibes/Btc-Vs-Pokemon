@@ -56,12 +56,16 @@ function pickPrice(rows) {
 // Set names differ between sources — the Pokémon TCG API says "Base" where
 // TCGplayer says "Base Set" — so matching tries progressively looser rules and
 // reports what it chose, since a wrong group silently yields no cards.
+// The two sources name sets differently, and promos are the worst offenders.
 const SET_ALIASES = {
   "base": ["base set"],
   "base set": ["base"],
-  "neo genesis": ["neo genesis"],
-  "evolving skies": ["evolving skies"],
-  "crown zenith galarian gallery": ["crown zenith: galarian gallery", "crown zenith galarian gallery"]
+  "evolving skies": ["swsh07: evolving skies", "evolving skies"],
+  "champion's path": ["swsh035: champion's path", "champions path"],
+  "crown zenith galarian gallery": ["crown zenith: galarian gallery"],
+  "nintendo black star promos": ["nintendo promos", "nintendo black star promos"],
+  "pop series 5": ["pop series 5"],
+  "mcdonald's collection 2019": ["mcdonald's collection 2019", "mcdonalds collection 2019"]
 };
 
 const norm = s => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
