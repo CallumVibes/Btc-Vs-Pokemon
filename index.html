@@ -173,6 +173,8 @@
   .board-list .nm{flex:1;min-width:0;font-size:13px;font-weight:500;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .board-list .nm small{display:block;font-family:var(--data);font-size:9.5px;color:var(--dim)}
+  .board-list .depth{font-family:var(--data);font-size:10px;color:var(--dim);
+    border:1px solid rgba(240,231,210,.18);border-radius:2px;padding:2px 5px;flex:none}
   .board-list .sats{font-family:var(--data);font-size:11.5px;color:var(--sats);text-align:right;flex:none}
   .board-list .sats small{display:block;color:var(--dim);font-size:10px}
 
@@ -806,7 +808,8 @@
     if (!covers) {
       bEl.className = pEl.className = "side__pct flat";
       bEl.textContent = pEl.textContent = "—";
-      el("pkmDetail").textContent = `only ${Math.round(span)} days of card data`;
+      const d0 = historyDepth(state.cardId);
+      el("pkmDetail").textContent = `${d0.points} points over ${d0.days} days stored`;
       v.innerHTML = `Not enough card history for this window.<small>Covered so far: ${Math.round(span)} of ${state.range} days. Try a shorter range.</small>`;
       return;
     }
@@ -817,10 +820,11 @@
     bEl.className = "side__pct " + pctClass(b); bEl.textContent = pctText(b);
     pEl.className = "side__pct " + pctClass(p); pEl.textContent = pctText(p);
     const moved = s.some(p => Math.abs(p.card - s[0].card) > 1e-9);
+    const dep = historyDepth(state.cardId);
     el("pkmDetail").textContent = isDerived(s)
-      ? "from Cardmarket 7 & 30-day averages"
-      : moved ? `${s.length} snapshots · raw price`
-              : `Cardmarket hasn't repriced it in ${Math.round(span)} days`;
+      ? "estimated from Cardmarket averages"
+      : moved ? `${s.length} points · ${dep.days}d stored`
+              : `flat — hasn't repriced in ${Math.round(span)} days`;
 
     const gap = Math.abs(b - p);
     const leader = b > p ? "Bitcoin" : latest().cards[state.cardId].name;
@@ -1482,6 +1486,7 @@
           ${r.c.img ? `<img src="${r.c.img}" alt="" loading="lazy">` : ""}
           <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}${
             r.c.avg1 == null && r.c.cmp == null ? " · trend only" : ""}</small></span>
+          <span class="depth" title="stored history">${depthLabel(historyDepth(r.id))}</span>
           <span class="sats">${num.format(Math.round(r.gbp / l.btc.gbp * 1e8))}
             <small>${gbpFmt.format(r.gbp)}</small></span>
         </button>
@@ -2005,6 +2010,17 @@
       x.setAttribute("aria-pressed", String(parseInt(x.dataset.range, 10) === days)));
     if (auto) state.rangeAuto = true;
   }
+
+  // How many days of stored history a card actually has, and how many points.
+  // Without this it's guesswork whether a backfill reached a given card.
+  function historyDepth(id) {
+    const rows = state.history.filter(h => h.cards && h.cards[id] && h.btc);
+    if (rows.length < 2) return {points: rows.length, days: 0};
+    const days = (new Date(rows[rows.length-1].d) - new Date(rows[0].d)) / 86400000;
+    return {points: rows.length, days: Math.round(days)};
+  }
+  const depthLabel = d => d.days >= 300 ? "1y" : d.days >= 60 ? Math.round(d.days/30) + "mo"
+                        : d.days >= 1 ? d.days + "d" : "—";
 
   const isFav = id => state.favourites.includes(id);
 
