@@ -228,9 +228,19 @@ async function main() {
   }
   console.log(`\nfetching ${dates.length} archive days (every ${STEP} days, back ${DAYS})\n`);
 
+  const FORCE = process.env.FORCE === "1";
+  const byDate = new Map(history.map(h => [h.d, h]));
+
   const added = [];
+  let filled = 0;
   for (const date of dates) {
-    if (history.some(h => h.d === date && !h.est)) { console.log(`  ${date}: already have it`); continue; }
+    // Skip only when this date already holds every card we're mapping. A date
+    // saved on an earlier run with fewer cards still needs the rest filling in.
+    const have = byDate.get(date);
+    if (!FORCE && have && !have.est && ids.every(id => have.cards && have.cards[id])) {
+      console.log(`  ${date}: complete`);
+      continue;
+    }
     let rows = null;
     try { rows = await pricesForDate(date, groupIds); }
     catch (e) { console.log(`  ${date}: ${e.message}`); }
@@ -250,21 +260,23 @@ async function main() {
     }
     if (!Object.keys(cardsOut).length) { console.log(`  ${date}: no prices matched`); continue; }
 
-    added.push({d: date, btc: {gbp, usd, eur: gbp / (gbp / usd) * (gbp / usd)}, cards: cardsOut, src: "tcgcsv"});
-    console.log(`  ${date}: ${Object.keys(cardsOut).length} cards, BTC £${Math.round(gbp)}`);
+    // Merge into an existing entry rather than replacing it, so cards saved on
+    // a previous run survive.
+    const prev = (have && !have.est) ? have.cards : {};
+    const entry = {d: date, btc: {gbp, usd}, cards: {...prev, ...cardsOut}, src: "tcgcsv"};
+    byDate.set(date, entry);
+
+    const isNew = !have || have.est;
+    if (isNew) added.push(entry); else filled++;
+    console.log(`  ${date}: ${Object.keys(cardsOut).length} cards${isNew ? "" : " (topped up)"}, BTC £${Math.round(gbp)}`);
     await sleep(400);
   }
-
-  // Real archive data replaces anything reconstructed for the same day.
-  const byDate = new Map(history.filter(h => !h.est).map(h => [h.d, h]));
-  for (const entry of added) byDate.set(entry.d, entry);
-  for (const h of history) if (!byDate.has(h.d)) byDate.set(h.d, h);
 
   const merged = [...byDate.values()].sort((a, b) => (a.d < b.d ? -1 : 1));
   await writeFile(OUT, JSON.stringify(merged, null, 0) + "\n");
   await rm(TMP, {recursive: true, force: true});
 
-  console.log(`\nadded ${added.length} days of real price history. history.json now holds ${merged.length} entries.`);
+  console.log(`\nadded ${added.length} new days, topped up ${filled} existing ones. history.json now holds ${merged.length} entries.`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
