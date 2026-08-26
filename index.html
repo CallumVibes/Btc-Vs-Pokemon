@@ -71,6 +71,21 @@
     padding:4px 7px;border-bottom-right-radius:9px;text-transform:uppercase}
   .champ__label{font-family:var(--data);font-size:10px;letter-spacing:.18em;
     text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+  .fav{background:none;border:1px solid rgba(240,231,210,.22);border-radius:3px;
+    color:var(--dim);padding:6px 11px;cursor:pointer;margin:0 0 9px;
+    font-family:var(--data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:7px;transition:color .18s ease,border-color .18s ease}
+  .fav:hover{color:var(--paper);border-color:rgba(240,231,210,.45)}
+  .fav[aria-pressed="true"]{color:var(--gold);border-color:rgba(232,194,90,.55)}
+  .fav__star{font-size:13px;line-height:1}
+  .fav:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
+
+  .board-row .star{flex:none;font-size:14px;line-height:1;color:rgba(240,231,210,.25);
+    padding:4px 2px;transition:color .16s ease}
+  .board-row .star.on{color:var(--gold)}
+  .board-row:hover .star{color:rgba(240,231,210,.5)}
+  .board-row:hover .star.on{color:var(--gold)}
+
   .champ__name{font-family:var(--display);font-size:clamp(1.1rem,4.6vw,1.9rem);margin:0;line-height:1.2}
   .champ__meta{font-family:var(--data);font-size:11px;color:var(--dim);margin:8px 0 0;letter-spacing:.04em}
   .champ__price{font-family:var(--data);font-size:15px;color:var(--foil);margin:10px 0 0;
@@ -171,6 +186,20 @@
   .stat__v{font-family:var(--display);font-size:19px;margin:0;line-height:1.15}
   .stat__v.dim{color:var(--dim);font-size:13px;font-family:var(--data);font-weight:400}
   .stat__s{font-family:var(--data);font-size:10.5px;color:var(--dim);margin:6px 0 0;line-height:1.5}
+
+  /* the argument */
+  .case-seg{margin:16px 0 0;display:inline-flex}
+  .case-seg button{padding:9px 15px;font-size:11px}
+  .case{margin:4px 0 0}
+  .case[hidden]{display:none}
+  .case__list{margin:16px 0 0;padding:0 0 0 4px;list-style:none;counter-reset:c}
+  .case__list li{position:relative;padding:0 0 0 40px;margin:0 0 16px;
+    font-size:13.5px;line-height:1.62;color:var(--dim);counter-increment:c}
+  .case__list li::before{content:counter(c,decimal-leading-zero);position:absolute;left:0;top:1px;
+    font-family:var(--data);font-size:11px;color:var(--gold);letter-spacing:.04em}
+  .case__list b{color:var(--paper);font-weight:700}
+  .case__common{margin:22px 0 0;padding:14px 16px;border-left:2px solid var(--foil);
+    background:rgba(127,216,232,.06);font-size:13px;line-height:1.62;color:var(--dim)}
 
   /* ---------- battle ---------- */
   .champ__col{display:flex;flex-direction:column;gap:9px}
@@ -343,6 +372,9 @@
     </div>
     <div>
       <p class="champ__label" id="champLabel">Priciest card on the board</p>
+      <button class="fav" id="favBtn" aria-pressed="false" title="Keep this card">
+        <span class="fav__star" id="favStar">☆</span><span id="favText">Favourite</span>
+      </button>
       <h1 class="champ__name" id="cardName">Loading…</h1>
       <p class="champ__meta" id="cardMeta">&nbsp;</p>
       <p class="champ__price">
@@ -456,6 +488,40 @@
     <div class="stats" id="statGrid"></div>
   </section>
 
+  <section class="panel">
+    <h2 class="panel__title">The argument</h2>
+    <p class="panel__hint">Both sides, put as well as they deserve.</p>
+
+    <div class="seg case-seg" role="group" aria-label="Which case">
+      <button data-case="btc" aria-pressed="true">For bitcoin</button>
+      <button data-case="card" aria-pressed="false">For cardboard</button>
+    </div>
+
+    <div class="case" id="caseBtc">
+      <ol class="case__list">
+        <li><b>The supply is fixed and you can check it yourself.</b> Twenty-one million, enforced by every node running the rules. Pokémon's scarcity is a corporate decision — The Pokémon Company owns the printers and has reprinted chase cards when demand got loud. Modern print runs already dropped prices 40–60%.</li>
+        <li><b>Nobody's opinion sits between you and your holding.</b> A PSA 10 is one private company's grade. Standards drift, re-slabs reprice, and pop reports come from the same firms that profit from grading. A bitcoin needs no adjudicator.</li>
+        <li><b>You can leave with it in seconds.</b> Sell a card and you're looking at days to weeks, plus 10–20% to eBay or an auction house. Sell bitcoin and it's near-instant at a few basis points. That gap is a permanent tax on the card side of every comparison.</li>
+        <li><b>It's divisible and portable in a way an object never is.</b> You can send £8 or £800,000 across a border from a phone. You cannot post half a Charizard, and the whole one needs insuring, storing and protecting from damp, fire and theft.</li>
+        <li><b>Condition risk only runs one way.</b> Cardboard degrades. A corner ding, a bit of sun, a bad reseal, and value evaporates. A UTXO doesn't develop whitening.</li>
+        <li><b>Counterfeits are an unsolved problem there and a solved one here.</b> Fakes get better every year and grading is the expensive patch. Every node validates every coin for free.</li>
+      </ol>
+    </div>
+
+    <div class="case" id="caseCard" hidden>
+      <ol class="case__list">
+        <li><b>Thirty years of demand that has nothing to do with speculation.</b> People want these because they were eight once. That's a deeper foundation than most assets have, and it's shown no sign of exhausting — 2026 is the franchise's 30th anniversary.</li>
+        <li><b>The drawdowns are gentler.</b> High-grade vintage largely held through the post-2021 correction. Bitcoin routinely gives back 70–80% peak to trough. If you can't sit through that, the theoretical return is irrelevant.</li>
+        <li><b>You cannot lose it to a forgotten passphrase.</b> No seed, no phishing, no exchange collapse, no bricked hardware wallet. The failure modes are ones ordinary people already understand: fire, theft, water.</li>
+        <li><b>It sits outside the financial system entirely.</b> No rails to be cut off, no exchange to freeze, no regulatory attack surface. A binder in a cupboard is remarkably hard to sanction.</li>
+        <li><b>Supply of the old stuff genuinely does shrink.</b> Vintage cards get damaged, lost and thrown out every year. The 1999 print run only goes down, and high-grade survivors get rarer with time.</li>
+        <li><b>You get to actually enjoy it.</b> It's a physical object you can show people. That's not an investment argument, but it is a real return, and it's one bitcoin can't pay.</li>
+      </ol>
+    </div>
+
+    <p class="case__common">Where they agree: neither pays a dividend, neither produces anything, and both are worth exactly what the next person will pay. Anyone holding one and mocking the other for that is standing on the same ground.</p>
+  </section>
+
   <footer class="foot">
     <p class="pwa" id="pwaRow">
       <button class="pwa__btn" id="installBtn" hidden>Install app</button>
@@ -487,7 +553,7 @@
   const dec = new Intl.NumberFormat("en-GB",{maximumFractionDigits:1});
 
   const state = { history: [], range: 90, cardId: null, hosted: false, committed: 0,
-                  extras: {}, overrides: {}, market: null, btcDaily: [], btcYear: [], rangeAuto: true };
+                  extras: {}, overrides: {}, favourites: [], market: null, btcDaily: [], btcYear: [], rangeAuto: true };
 
   /* ---------- local persistence (used when there's no committed history) ---------- */
   const LOCAL = "btc-vs-pokemon:local";
@@ -512,15 +578,17 @@
       return {
         history: Array.isArray(o.history) ? o.history : [],
         extras: (o.extras && typeof o.extras === "object") ? o.extras : {},
-        overrides: (o.overrides && typeof o.overrides === "object") ? o.overrides : {}
+        overrides: (o.overrides && typeof o.overrides === "object") ? o.overrides : {},
+        favourites: Array.isArray(o.favourites) ? o.favourites : []
       };
-    } catch (e) { return {history: [], extras: {}, overrides: {}}; }
+    } catch (e) { return {history: [], extras: {}, overrides: {}, favourites: []}; }
   }
   async function writeLocal() {
     await store.set(LOCAL, JSON.stringify({
       history: state.history.slice(-1095),
       extras: state.extras,
-      overrides: state.overrides
+      overrides: state.overrides,
+      favourites: state.favourites
     }));
   }
 
@@ -698,8 +766,14 @@
       : "updated " + pretty(l.d);
     el("headPrice").textContent = gbpFmt.format(l.btc.gbp);
 
+    const fav = isFav(state.cardId);
+    el("favBtn").setAttribute("aria-pressed", String(fav));
+    el("favStar").textContent = fav ? "★" : "☆";
+    el("favText").textContent = fav ? "Favourited" : "Favourite";
+
     const isChamp = state.cardId === championId();
-    el("champLabel").textContent = isChamp ? "Priciest card on the board" : "Comparing against";
+    el("champLabel").textContent = fav ? "Your pick"
+      : isChamp ? "Priciest card on the board" : "Comparing against";
     el("crown").hidden = !isChamp;
   }
 
@@ -1379,13 +1453,15 @@
     const rows = Object.entries(l.cards)
       .map(([id, c]) => ({id, c, gbp: priceOf(id, l)}))
       .filter(r => r.gbp != null)
-      .sort((a, b) => b.gbp - a.gbp);
+      .sort((a, b) => (isFav(b.id) - isFav(a.id)) || (b.gbp - a.gbp));
 
     host.innerHTML = rows.map((r, i) => `
       <li>
         <button class="board-row${r.id === state.cardId ? " is-current" : ""}" data-pick="${r.id}"
                 aria-label="Compare bitcoin against ${r.c.name}">
           <span class="rank">${i + 1}</span>
+          <span class="star${isFav(r.id) ? " on" : ""}" data-fav="${r.id}"
+                role="button" tabindex="0" aria-label="Favourite ${r.c.name}">${isFav(r.id) ? "★" : "☆"}</span>
           ${r.c.img ? `<img src="${r.c.img}" alt="" loading="lazy">` : ""}
           <span class="nm">${r.c.name}<small>${[r.c.set, r.c.year].filter(Boolean).join(" · ")}${
             r.c.avg1 == null && r.c.cmp == null ? " · trend only" : ""}</small></span>
@@ -1799,6 +1875,8 @@
   });
 
   el("grailBoard").addEventListener("click", e => {
+    const star = e.target.closest("[data-fav]");
+    if (star) { e.stopPropagation(); toggleFav(star.dataset.fav); return; }
     const row = e.target.closest("[data-pick]");
     if (!row) return;
     state.cardId = row.dataset.pick;
@@ -1807,6 +1885,17 @@
     renderAll();
     document.querySelector(".champ").scrollIntoView({behavior:"smooth", block:"start"});
   });
+
+  document.querySelectorAll("[data-case]").forEach(b =>
+    b.addEventListener("click", () => {
+      const pick = b.dataset.case;
+      document.querySelectorAll("[data-case]").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      el("caseBtc").hidden = pick !== "btc";
+      el("caseCard").hidden = pick !== "card";
+    }));
+
+  el("favBtn").addEventListener("click", () => toggleFav(state.cardId));
 
   el("pick").addEventListener("change", () => {
     state.cardId = el("pick").value;
@@ -1900,8 +1989,29 @@
     if (auto) state.rangeAuto = true;
   }
 
+  const isFav = id => state.favourites.includes(id);
+
+  function toggleFav(id) {
+    if (!id) return;
+    state.favourites = isFav(id)
+      ? state.favourites.filter(x => x !== id)
+      : [...state.favourites, id];
+    // A favourited card is tracked daily like a grail, so its history keeps
+    // building whether or not it's the one on screen.
+    const l = latest();
+    if (isFav(id) && l && l.cards[id] && !state.extras[id]) {
+      const c = l.cards[id];
+      state.extras[id] = {name:c.name, set:c.set, number:c.number, year:c.year, img:c.img};
+    }
+    writeLocal();
+    renderAll();
+  }
+
+  // Favourites outrank price. Otherwise the priciest card wins.
   function pickCard() {
-    state.cardId = championId();
+    const l = latest();
+    const fav = state.favourites.find(id => l && l.cards[id]);
+    state.cardId = fav || championId();
   }
 
   async function boot() {
@@ -1911,6 +2021,7 @@
     state.committed = hosted.entries.length;
     state.extras = local.extras || {};
     state.overrides = local.overrides || {};
+    state.favourites = local.favourites || [];
     state.history = mergeHistories(hosted.entries, local.history || []);
 
     // 1. Anything already stored goes on screen straight away.
