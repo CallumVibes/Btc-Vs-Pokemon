@@ -1322,8 +1322,14 @@
   // job hasn't accumulated enough yet.
   // Which price field to use across a whole series. Only the responsive metric
   // if every point in the window carries it — otherwise the sticky one for all.
+  // Preference order: TCGplayer market price first, since that's what the
+  // archive backfill records and so it has genuine history. Never mixed —
+  // a field only qualifies if every point in the window carries it.
   function metricFor(rows, id) {
-    return rows.every(h => h.cards[id] && h.cards[id].cmp != null) ? "cmp" : "eur";
+    for (const field of ["usd", "cmp", "eur"]) {
+      if (rows.every(h => h.cards[id] && h.cards[id][field] != null)) return field;
+    }
+    return "eur";
   }
 
   // A card cannot plausibly move this much in a day. If it appears to, the

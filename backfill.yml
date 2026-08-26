@@ -1,0 +1,54 @@
+name: Backfill price history
+
+# Run this by hand from the Actions tab. It pulls real historical card prices
+# from TCGCSV's archive of TCGplayer data (available from 2024-02-08 onwards).
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days back to go"
+        required: false
+        default: "365"
+      step:
+        description: "Sample every N days (7 = weekly)"
+        required: false
+        default: "7"
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Make sure 7z is available
+        run: 7z i > /dev/null && echo "7z present"
+
+      - name: Seed today's snapshot if history is empty
+        run: |
+          if [ ! -s history.json ] || [ "$(cat history.json)" = "[]" ]; then
+            echo "history.json empty — running update.mjs first"
+            node update.mjs
+          fi
+
+      - name: Pull the archive
+        env:
+          DAYS: ${{ github.event.inputs.days }}
+          STEP: ${{ github.event.inputs.step }}
+        run: node backfill.mjs
+
+      - name: Commit the history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history.json
+          git diff --staged --quiet || git commit -m "Backfill price history"
+          git push

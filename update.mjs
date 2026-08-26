@@ -44,6 +44,18 @@ async function getJson(url, tries = 3) {
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// TCGplayer market price — the metric TCGCSV's archive records, so backfilled
+// history and ongoing snapshots stay directly comparable.
+function priceUsd(c) {
+  const p = c.tcgplayer && c.tcgplayer.prices;
+  if (!p) return null;
+  for (const k of ["holofoil","1stEditionHolofoil","unlimitedHolofoil","normal","reverseHolofoil","1stEdition"]) {
+    if (p[k] && p[k].market > 0) return p[k].market;
+  }
+  for (const v of Object.values(p)) if (v && v.market > 0) return v.market;
+  return null;
+}
+
 function priceEur(c) {
   const p = c.cardmarket && c.cardmarket.prices;
   if (!p) return null;
@@ -69,6 +81,9 @@ async function main() {
           year: c.set && c.set.releaseDate ? c.set.releaseDate.slice(0, 4) : "",
           img: (c.images && (c.images.large || c.images.small)) || "",
           eur: priceEur(c),
+          usd: priceUsd(c),
+          cmp: (c.cardmarket?.prices?.avg1) ?? (c.cardmarket?.prices?.averageSellPrice)
+               ?? (c.cardmarket?.prices?.avg7) ?? priceEur(c),
           avg1:  (c.cardmarket?.prices?.avg1)  ?? null,
           avg7:  (c.cardmarket?.prices?.avg7)  ?? null,
           avg30: (c.cardmarket?.prices?.avg30) ?? null
@@ -91,7 +106,7 @@ async function main() {
     btc: { gbp: btc.gbp, eur: btc.eur, usd: btc.usd },
     cards: Object.fromEntries(top.map(c => [c.id, {
       name: c.name, set: c.set, number: c.number, year: c.year, img: c.img,
-      eur: c.eur, avg1: c.avg1, avg7: c.avg7, avg30: c.avg30
+      eur: c.eur, usd: c.usd, cmp: c.cmp, avg1: c.avg1, avg7: c.avg7, avg30: c.avg30
     }]))
   };
 
