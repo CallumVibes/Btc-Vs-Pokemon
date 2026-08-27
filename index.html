@@ -546,7 +546,7 @@
 
   // Bump this whenever the file changes, so it's obvious at a glance whether
   // the deployed page is the one you just uploaded.
-  const BUILD = "2026-08-27b";
+  const BUILD = "2026-08-27c";
 
   const CG = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,eur,usd";
   const TCG = "https://api.pokemontcg.io/v2/cards";
@@ -1353,13 +1353,19 @@
   // Pick the field that covers the most rows, and then use only the rows that
   // have it. Backfilled days carry a TCGplayer price, daily snapshots carry a
   // Cardmarket one — falling back to a field half the rows lack produced NaN.
+  // Pick the field that covers the longest span, not the one with the most
+  // rows. Backfilled history is weekly while snapshots are daily, so counting
+  // rows let nine recent days outvote a year of weekly points.
   function metricFor(rows, id) {
-    let best = null, bestCount = 0;
+    let best = null, bestScore = -1;
     for (const field of ["usd", "cmp", "eur"]) {
-      const n = rows.filter(h => h.cards[id] && h.cards[id][field] != null).length;
-      if (n > bestCount) { best = field; bestCount = n; }
+      const rs = rows.filter(h => h.cards[id] && h.cards[id][field] != null);
+      if (rs.length < 2) continue;
+      const span = (new Date(rs[rs.length-1].d) - new Date(rs[0].d)) / 86400000;
+      const score = span * 1000 + rs.length;   // span dominates, rows break ties
+      if (score > bestScore) { bestScore = score; best = field; }
     }
-    return bestCount >= 2 ? best : null;
+    return best;
   }
 
   // Build a series from one field only, dropping rows that don't carry it, and
