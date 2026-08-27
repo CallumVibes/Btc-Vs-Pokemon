@@ -546,7 +546,7 @@
 
   // Bump this whenever the file changes, so it's obvious at a glance whether
   // the deployed page is the one you just uploaded.
-  const BUILD = "2026-08-27a";
+  const BUILD = "2026-08-27b";
 
   const CG = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,eur,usd";
   const TCG = "https://api.pokemontcg.io/v2/cards";
@@ -738,14 +738,13 @@
       if (market > 0) k = o / market;
     }
     const rows = windowed().filter(h => h.cards && h.cards[id] && h.btc);
-    const field = metricFor(rows, id);
-    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id][field] * fx * k}));
+    const real = rowsToSeries(rows, id, metricFor(rows, id), fx, k);
     return bestSeries(id, state.range, real);
   }
 
   /* ---------- render ---------- */
-  const pctText = v => (v >= 0 ? "+" : "") + dec.format(v) + "%";
-  const pctClass = v => v > 0.05 ? "up" : v < -0.05 ? "down" : "flat";
+  const pctText = v => Number.isFinite(v) ? (v >= 0 ? "+" : "") + dec.format(v) + "%" : "—";
+  const pctClass = v => !Number.isFinite(v) ? "flat" : v > 0.05 ? "up" : v < -0.05 ? "down" : "flat";
 
   function renderChampion() {
     const l = latest();
@@ -1351,11 +1350,26 @@
   // Preference order: TCGplayer market price first, since that's what the
   // archive backfill records and so it has genuine history. Never mixed —
   // a field only qualifies if every point in the window carries it.
+  // Pick the field that covers the most rows, and then use only the rows that
+  // have it. Backfilled days carry a TCGplayer price, daily snapshots carry a
+  // Cardmarket one — falling back to a field half the rows lack produced NaN.
   function metricFor(rows, id) {
+    let best = null, bestCount = 0;
     for (const field of ["usd", "cmp", "eur"]) {
-      if (rows.every(h => h.cards[id] && h.cards[id][field] != null)) return field;
+      const n = rows.filter(h => h.cards[id] && h.cards[id][field] != null).length;
+      if (n > bestCount) { best = field; bestCount = n; }
     }
-    return "eur";
+    return bestCount >= 2 ? best : null;
+  }
+
+  // Build a series from one field only, dropping rows that don't carry it, and
+  // never letting a non-finite value through.
+  function rowsToSeries(rows, id, field, fx, k) {
+    if (!field) return [];
+    return rows
+      .filter(h => h.cards[id] && h.cards[id][field] != null)
+      .map(h => ({d: h.d, btc: h.btc.gbp, card: h.cards[id][field] * fx * k}))
+      .filter(p => Number.isFinite(p.card) && Number.isFinite(p.btc) && p.card > 0);
   }
 
   // A card cannot plausibly move this much in a day. If it appears to, the
@@ -1412,8 +1426,7 @@
       const key = cut.toISOString().slice(0, 10);
       rows = rows.filter(h => h.d >= key);
     }
-    const field = metricFor(rows, id);
-    const real = rows.map(h => ({d:h.d, btc:h.btc.gbp, card:h.cards[id][field] * fx * k}));
+    const real = rowsToSeries(rows, id, metricFor(rows, id), fx, k);
     return bestSeries(id, days, real);
   }
 
