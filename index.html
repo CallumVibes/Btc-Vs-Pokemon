@@ -339,6 +339,9 @@
   .foot{margin:44px 0 0;padding-top:18px;border-top:1px solid var(--line);
     font-size:12px;color:var(--dim);line-height:1.65}
   .foot p{margin:0 0 8px}
+  .build{font-family:var(--data);font-size:10.5px;color:var(--dim);
+    letter-spacing:.06em;margin:0 0 14px}
+  .build b{color:var(--foil);font-weight:400}
   .pwa{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
   .pwa:empty{display:none}
   .pwa__btn{background:var(--sats);color:#1A0F00;border:none;border-radius:3px;
@@ -525,6 +528,7 @@
   </section>
 
   <footer class="foot">
+    <p class="build">build <b id="buildStamp">—</b></p>
     <p class="pwa" id="pwaRow">
       <button class="pwa__btn" id="installBtn" hidden>Install app</button>
       <span class="pwa__status" id="pwaStatus"></span>
@@ -539,6 +543,10 @@
 <script>
 (() => {
   "use strict";
+
+  // Bump this whenever the file changes, so it's obvious at a glance whether
+  // the deployed page is the one you just uploaded.
+  const BUILD = "2026-08-27a";
 
   const CG = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,eur,usd";
   const TCG = "https://api.pokemontcg.io/v2/cards";
@@ -774,8 +782,11 @@
     el("favText").textContent = fav ? "Favourited" : "Favourite";
 
     const isChamp = state.cardId === championId();
+    const dep = historyDepth(state.cardId);
     el("champLabel").textContent = fav ? "Your pick"
-      : isChamp ? "Priciest card on the board" : "Comparing against";
+      : isChamp ? "Priciest card on the board"
+      : dep.days >= MIN_USEFUL_DAYS ? "Priciest card with history"
+      : "Comparing against";
     el("crown").hidden = !isChamp;
   }
 
@@ -2022,6 +2033,7 @@
   const depthLabel = d => d.days >= 300 ? "1y" : d.days >= 60 ? Math.round(d.days/30) + "mo"
                         : d.days >= 1 ? d.days + "d" : "—";
 
+  const MIN_USEFUL_DAYS = 14;
   const isFav = id => state.favourites.includes(id);
 
   function toggleFav(id) {
@@ -2041,10 +2053,23 @@
   }
 
   // Favourites outrank price. Otherwise the priciest card wins.
+  // Land on a card worth looking at: a favourite if there is one, otherwise the
+  // priciest card that actually has history behind it. The most expensive card
+  // is no use as a default if it was only added yesterday.
   function pickCard() {
     const l = latest();
-    const fav = state.favourites.find(id => l && l.cards[id]);
-    state.cardId = fav || championId();
+    if (!l || !l.cards) { state.cardId = null; return; }
+
+    const fav = state.favourites.find(id => l.cards[id]);
+    if (fav) { state.cardId = fav; return; }
+
+    const priced = Object.keys(l.cards)
+      .map(id => ({id, gbp: priceOf(id, l), days: historyDepth(id).days}))
+      .filter(r => r.gbp != null)
+      .sort((a, b) => b.gbp - a.gbp);
+
+    const usable = priced.filter(r => r.days >= MIN_USEFUL_DAYS);
+    state.cardId = (usable[0] || priced[0] || {}).id || null;
   }
 
   async function boot() {
@@ -2101,6 +2126,8 @@
     renderAll();
     loadExtras();
   }
+
+  el("buildStamp").textContent = BUILD;
 
   boot();
 })();
